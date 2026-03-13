@@ -205,10 +205,10 @@ export default function Transactions() {
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                              tx.type === 'CREDIT' ? 'bg-green-100' : 'bg-red-50'
+                              tx.type.toUpperCase() === 'CREDIT' ? 'bg-green-100' : 'bg-red-50'
                             }`}
                           >
-                            {tx.type === 'CREDIT' ? (
+                            {tx.type.toUpperCase() === 'CREDIT' ? (
                               <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
                             ) : (
                               <ArrowDownRight className="w-3.5 h-3.5 text-red-500" />
@@ -226,23 +226,19 @@ export default function Transactions() {
                         {tx.merchant || '—'}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {tx.category ? (
-                          <Badge variant="gray">{tx.category.name}</Badge>
-                        ) : (
-                          <span className="text-xs text-gray-400">Uncategorized</span>
-                        )}
+                        {(() => { const cat = categories?.find(c => c.id === tx.category_id); return cat ? <Badge variant="gray">{cat.name}</Badge> : <span className="text-xs text-gray-400">Uncategorized</span>; })()}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
-                        {tx.account?.name || '—'}
+                        {accounts?.find(a => a.id === tx.account_id)?.name || '—'}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <span
                           className={`text-sm font-semibold ${
-                            tx.type === 'CREDIT' ? 'text-green-600' : 'text-red-500'
+                            tx.type.toUpperCase() === 'CREDIT' ? 'text-green-600' : 'text-red-500'
                           }`}
                         >
-                          {tx.type === 'CREDIT' ? '+' : '-'}
-                          {formatCurrency(tx.amount)}
+                          {tx.type.toUpperCase() === 'CREDIT' ? '+' : '-'}
+                          {formatCurrency(tx.amount, accounts?.find(a => a.id === tx.account_id)?.currency || 'USD')}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -295,7 +291,7 @@ export default function Transactions() {
       {/* Create Modal */}
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Add Transaction" size="lg">
         <form
-          onSubmit={createForm.handleSubmit((v) => createMutation.mutate(v as TxValues))}
+          onSubmit={createForm.handleSubmit((v) => createMutation.mutate({ ...v, category_id: v.category_id || undefined } as TxValues))}
           className="space-y-4"
         >
           {createMutation.error && <ErrorAlert message="Failed to create transaction." />}
@@ -353,7 +349,7 @@ export default function Transactions() {
       <Modal isOpen={!!editTx} onClose={() => setEditTx(null)} title="Edit Transaction" size="lg">
         <form
           onSubmit={editForm.handleSubmit((v) =>
-            updateMutation.mutate({ id: editTx!.id, payload: v })
+            updateMutation.mutate({ id: editTx!.id, payload: { ...v, category_id: v.category_id || undefined } })
           )}
           className="space-y-4"
         >

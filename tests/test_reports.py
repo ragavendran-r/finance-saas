@@ -65,7 +65,7 @@ async def test_spending_by_category_with_data(client):
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) >= 1
-    food_entry = next((r for r in data if r["category"] == "Food"), None)
+    food_entry = next((r for r in data if r["category"] and r["category"]["name"] == "Food"), None)
     assert food_entry is not None
     assert float(food_entry["total"]) == 150.0
 
@@ -95,7 +95,7 @@ async def test_spending_by_category_date_filter(client):
     )
     assert resp.status_code == 200
     # The old transaction should not appear
-    food_entry = next((r for r in resp.json() if r["category"] == "Food"), None)
+    food_entry = next((r for r in resp.json() if r["category"] and r["category"]["name"] == "Food"), None)
     assert food_entry is None
 
 

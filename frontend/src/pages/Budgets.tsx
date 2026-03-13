@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Plus, Pencil, Trash2, Target } from 'lucide-react';
 import { budgetsApi } from '../api/budgets';
 import { categoriesApi } from '../api/categories';
+import { accountsApi } from '../api/accounts';
 import type { Budget } from '../types';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
@@ -43,6 +44,9 @@ export default function Budgets() {
     queryKey: ['budgets'],
     queryFn: budgetsApi.list,
   });
+
+  const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
+  const currency = accounts?.[0]?.currency || 'USD';
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -124,6 +128,8 @@ export default function Budgets() {
             <BudgetCard
               key={budget.id}
               budget={budget}
+              categories={categories}
+              currency={currency}
               onEdit={() => openEdit(budget)}
               onDelete={() => setDeleteBudget(budget)}
             />
@@ -134,7 +140,7 @@ export default function Budgets() {
       {/* Create Modal */}
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create Budget">
         <form
-          onSubmit={createForm.handleSubmit((v) => createMutation.mutate(v as CreateValues))}
+          onSubmit={createForm.handleSubmit((v) => createMutation.mutate({ ...v, end_date: v.end_date || undefined } as CreateValues))}
           className="space-y-4"
         >
           {createMutation.error && <ErrorAlert message="Failed to create budget." />}
@@ -177,7 +183,7 @@ export default function Budgets() {
       <Modal isOpen={!!editBudget} onClose={() => setEditBudget(null)} title="Edit Budget">
         <form
           onSubmit={editForm.handleSubmit((v) =>
-            updateMutation.mutate({ id: editBudget!.id, payload: v as EditValues })
+            updateMutation.mutate({ id: editBudget!.id, payload: { ...v, end_date: v.end_date || undefined } as EditValues })
           )}
           className="space-y-4"
         >
@@ -200,7 +206,7 @@ export default function Budgets() {
         onClose={() => setDeleteBudget(null)}
         onConfirm={() => deleteBudget && deleteMutation.mutate(deleteBudget.id)}
         title="Delete Budget"
-        message={`Delete this budget for "${deleteBudget?.category?.name || 'this category'}"?`}
+        message={`Delete this budget for "${categories?.find(c => c.id === deleteBudget?.category_id)?.name || 'this category'}"?`}
         isLoading={deleteMutation.isPending}
       />
     </div>
@@ -209,10 +215,14 @@ export default function Budgets() {
 
 function BudgetCard({
   budget,
+  categories,
+  currency,
   onEdit,
   onDelete,
 }: {
   budget: Budget;
+  categories: import('../types').Category[] | undefined;
+  currency: string;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -232,16 +242,16 @@ function BudgetCard({
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
             style={{
-              backgroundColor: budget.category?.color
-                ? `${budget.category.color}22`
+              backgroundColor: categories?.find(c => c.id === budget.category_id)?.color
+                ? `${categories?.find(c => c.id === budget.category_id)?.color}22`
                 : '#f3f4f6',
             }}
           >
-            {budget.category?.icon || <Target className="w-4 h-4 text-gray-400" />}
+            {categories?.find(c => c.id === budget.category_id)?.icon || <Target className="w-4 h-4 text-gray-400" />}
           </div>
           <div>
             <p className="font-semibold text-gray-800">
-              {budget.category?.name || 'Unknown Category'}
+              {categories?.find(c => c.id === budget.category_id)?.name || 'Unknown Category'}
             </p>
             <p className="text-xs text-gray-400">
               From {formatDate(budget.start_date)}
@@ -279,14 +289,14 @@ function BudgetCard({
               <span
                 className={`text-sm font-bold ${isOver ? 'text-red-600' : 'text-gray-800'}`}
               >
-                {formatCurrency(progress.spent)} spent
+                {formatCurrency(progress.spent, currency)} spent
               </span>
               {isOver && (
                 <Badge variant="red">Over budget!</Badge>
               )}
             </div>
             <span className="text-xs text-gray-500">
-              of {formatCurrency(progress.budgeted)}
+              of {formatCurrency(progress.budgeted, currency)}
             </span>
           </div>
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -307,8 +317,8 @@ function BudgetCard({
             </span>
             <span className="text-xs text-gray-500">
               {isOver
-                ? `${formatCurrency(Math.abs(progress.remaining))} over`
-                : `${formatCurrency(progress.remaining)} remaining`}
+                ? `${formatCurrency(Math.abs(progress.remaining), currency)} over`
+                : `${formatCurrency(progress.remaining, currency)} remaining`}
             </span>
           </div>
         </>

@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models.budget import BudgetPeriod
 
@@ -11,6 +11,11 @@ class BudgetCreate(BaseModel):
     category_id: uuid.UUID
     amount: Decimal
     period: BudgetPeriod
+
+    @field_validator("period", mode="before")
+    @classmethod
+    def normalize_period(cls, v: str) -> str:
+        return v.lower() if isinstance(v, str) else v
     start_date: date
     end_date: date | None = None
 

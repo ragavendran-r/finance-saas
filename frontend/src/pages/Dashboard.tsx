@@ -12,6 +12,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { reportsApi } from '../api/reports';
 import { transactionsApi } from '../api/transactions';
 import { budgetsApi } from '../api/budgets';
+import { categoriesApi } from '../api/categories';
+import { accountsApi } from '../api/accounts';
 import { Card } from '../components/Card';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Badge } from '../components/Badge';
@@ -47,6 +49,10 @@ export default function Dashboard() {
     queryFn: budgetsApi.list,
   });
 
+  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
+  const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
+  const currency = accounts?.[0]?.currency || 'USD';
+
   const { data: spending, isLoading: spendLoading } = useQuery({
     queryKey: ['reports', 'spending-by-category', dateFrom, dateTo],
     queryFn: () => reportsApi.spendingByCategory(dateFrom, dateTo),
@@ -59,7 +65,7 @@ export default function Dashboard() {
   const pieData = (spending || [])
     .filter((s) => s.total > 0)
     .map((s) => ({
-      name: s.category?.name || 'Uncategorized',
+      name: (s.category?.name) || 'Uncategorized',
       value: s.total,
     }));
 
@@ -82,7 +88,7 @@ export default function Dashboard() {
               <Wallet className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(netWorth?.total ?? 0)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(netWorth?.total ?? 0, currency)}</p>
           <p className="text-indigo-200 text-xs mt-2">Across all accounts</p>
         </div>
 
@@ -95,7 +101,7 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-2xl font-bold text-gray-900">
-            {formatCurrency(incomeExpenses?.income ?? 0)}
+            {formatCurrency(incomeExpenses?.income ?? 0, currency)}
           </p>
           <div className="flex items-center gap-1 mt-2">
             <ArrowUpRight className="w-3.5 h-3.5 text-green-500" />
@@ -112,7 +118,7 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-2xl font-bold text-gray-900">
-            {formatCurrency(incomeExpenses?.expenses ?? 0)}
+            {formatCurrency(incomeExpenses?.expenses ?? 0, currency)}
           </p>
           <div className="flex items-center gap-1 mt-2">
             <ArrowDownRight className="w-3.5 h-3.5 text-red-500" />
@@ -134,11 +140,11 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        tx.type === 'CREDIT' ? 'bg-green-100' : 'bg-red-50'
+                        tx.type.toUpperCase() === 'CREDIT' ? 'bg-green-100' : 'bg-red-50'
                       }`}
                     >
                       <DollarSign
-                        className={`w-4 h-4 ${tx.type === 'CREDIT' ? 'text-green-600' : 'text-red-500'}`}
+                        className={`w-4 h-4 ${tx.type.toUpperCase() === 'CREDIT' ? 'text-green-600' : 'text-red-500'}`}
                       />
                     </div>
                     <div className="min-w-0">
@@ -147,17 +153,17 @@ export default function Dashboard() {
                       </p>
                       <p className="text-xs text-gray-400">
                         {format(new Date(tx.date), 'MMM d')} •{' '}
-                        {tx.category?.name || 'Uncategorized'}
+                        {categories?.find(c => c.id === tx.category_id)?.name || 'Uncategorized'}
                       </p>
                     </div>
                   </div>
                   <span
                     className={`text-sm font-semibold flex-shrink-0 ml-2 ${
-                      tx.type === 'CREDIT' ? 'text-green-600' : 'text-red-500'
+                      tx.type.toUpperCase() === 'CREDIT' ? 'text-green-600' : 'text-red-500'
                     }`}
                   >
-                    {tx.type === 'CREDIT' ? '+' : '-'}
-                    {formatCurrency(tx.amount)}
+                    {tx.type.toUpperCase() === 'CREDIT' ? '+' : '-'}
+                    {formatCurrency(tx.amount, accounts?.find(a => a.id === tx.account_id)?.currency || currency)}
                   </span>
                 </li>
               ))}
@@ -202,7 +208,7 @@ export default function Dashboard() {
         <Card title="Budget Overview">
           <div className="space-y-4">
             {(budgets ?? []).slice(0, 5).map((budget) => (
-              <BudgetProgressRow key={budget.id} budgetId={budget.id} />
+              <BudgetProgressRow key={budget.id} budgetId={budget.id} categories={categories ?? []} currency={currency} />
             ))}
           </div>
         </Card>
@@ -211,7 +217,7 @@ export default function Dashboard() {
   );
 }
 
-function BudgetProgressRow({ budgetId }: { budgetId: string }) {
+function BudgetProgressRow({ budgetId, categories, currency }: { budgetId: string; categories: import('../types').Category[]; currency: string }) {
   const { data: progress } = useQuery({
     queryKey: ['budget-progress', budgetId],
     queryFn: () => budgetsApi.progress(budgetId),
@@ -227,14 +233,14 @@ function BudgetProgressRow({ budgetId }: { budgetId: string }) {
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">
-            {progress.budget.category?.name || 'Budget'}
+            {categories?.find(c => c.id === progress.budget.category_id)?.name || 'Budget'}
           </span>
           <Badge variant={isOver ? 'red' : 'gray'}>
             {progress.budget.period}
           </Badge>
         </div>
         <span className="text-xs text-gray-500">
-          {formatCurrency(progress.spent)} / {formatCurrency(progress.budgeted)}
+          {formatCurrency(progress.spent, currency)} / {formatCurrency(progress.budgeted, currency)}
         </span>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
