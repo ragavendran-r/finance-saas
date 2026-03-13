@@ -12,6 +12,7 @@ import Categories from './pages/Categories';
 import Budgets from './pages/Budgets';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
+import TaxAdvisory from './pages/TaxAdvisory';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,7 @@ export default function App() {
                       <Route path="/budgets" element={<Budgets />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/users" element={<Users />} />
+                      <Route path="/tax-advisory" element={<TaxAdvisory />} />
                     </Routes>
                   </Layout>
                 </ProtectedRoute>

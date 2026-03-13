@@ -10,6 +10,21 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ENVIRONMENT: str = "development"
 
+    # LLM provider — set to "anthropic", "openai", or "gemini"
+    LLM_PROVIDER: str = "anthropic"
+
+    # Anthropic (Claude)
+    ANTHROPIC_API_KEY: str = ""
+    LLM_MODEL_ANTHROPIC: str = "claude-sonnet-4-6"
+
+    # OpenAI
+    OPENAI_API_KEY: str = ""
+    LLM_MODEL_OPENAI: str = "gpt-4o"
+
+    # Google Gemini
+    GEMINI_API_KEY: str = ""
+    LLM_MODEL_GEMINI: str = "gemini-1.5-pro"
+
     class Config:
         env_file = ".env"
         case_sensitive = True
