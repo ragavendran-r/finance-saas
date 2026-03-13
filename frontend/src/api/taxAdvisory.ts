@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import apiClient from './client';
 
 export interface TaxRecommendation {
   section: string;
@@ -37,6 +37,8 @@ export interface TaxAdvisoryRequest {
 }
 
 export const taxAdvisoryApi = {
-  getRecommendations: (payload: TaxAdvisoryRequest): Promise<TaxAdvisoryResponse> =>
-    apiClient.post('/tax-advisory/recommendations', payload),
+  getRecommendations: async (payload: TaxAdvisoryRequest): Promise<TaxAdvisoryResponse> => {
+    const { data } = await apiClient.post<TaxAdvisoryResponse>('/tax-advisory/recommendations', payload);
+    return data;
+  },
 };
