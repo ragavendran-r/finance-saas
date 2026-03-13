@@ -18,6 +18,19 @@ import { formatCurrency } from '../utils/format';
 
 const ACCOUNT_TYPES: AccountType[] = ['CHECKING', 'SAVINGS', 'CREDIT', 'INVESTMENT', 'CASH'];
 
+const CURRENCIES = [
+  { code: 'INR', label: 'INR – Indian Rupee' },
+  { code: 'USD', label: 'USD – US Dollar' },
+  { code: 'EUR', label: 'EUR – Euro' },
+  { code: 'GBP', label: 'GBP – British Pound' },
+  { code: 'JPY', label: 'JPY – Japanese Yen' },
+  { code: 'AUD', label: 'AUD – Australian Dollar' },
+  { code: 'CAD', label: 'CAD – Canadian Dollar' },
+  { code: 'SGD', label: 'SGD – Singapore Dollar' },
+  { code: 'AED', label: 'AED – UAE Dirham' },
+  { code: 'CHF', label: 'CHF – Swiss Franc' },
+];
+
 const accountTypeIcon = {
   CHECKING: CreditCard,
   SAVINGS: PiggyBank,
@@ -65,7 +78,7 @@ export default function Accounts() {
   const createForm = useForm<CreateValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(createSchema) as any,
-    defaultValues: { currency: 'USD', type: 'CHECKING', balance: 0 },
+    defaultValues: { currency: 'INR', type: 'SAVINGS', balance: 0 },
   });
 
   const editForm = useForm<EditValues>({ resolver: zodResolver(editSchema) });
@@ -139,7 +152,8 @@ export default function Accounts() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(accounts ?? []).map((account) => {
-            const Icon = accountTypeIcon[account.type];
+            const typeKey = account.type.toUpperCase() as AccountType;
+            const Icon = accountTypeIcon[typeKey];
             return (
               <div
                 key={account.id}
@@ -188,7 +202,7 @@ export default function Accounts() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
-                    <Badge variant={accountTypeBadge[account.type]}>{account.type}</Badge>
+                    <Badge variant={accountTypeBadge[typeKey]}>{typeKey}</Badge>
                     {!account.is_active && <Badge variant="gray">Inactive</Badge>}
                   </div>
                 </div>
@@ -223,7 +237,11 @@ export default function Accounts() {
           </FormField>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Currency" error={createForm.formState.errors.currency?.message} required>
-              <Input placeholder="USD" error={!!createForm.formState.errors.currency} {...createForm.register('currency')} />
+              <Select error={!!createForm.formState.errors.currency} {...createForm.register('currency')}>
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.label}</option>
+                ))}
+              </Select>
             </FormField>
             <FormField label="Initial Balance" error={createForm.formState.errors.balance?.message} required>
               <Input type="number" step="0.01" error={!!createForm.formState.errors.balance} {...createForm.register('balance')} />

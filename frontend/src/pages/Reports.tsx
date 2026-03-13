@@ -15,6 +15,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { reportsApi } from '../api/reports';
+import { accountsApi } from '../api/accounts';
 import { Card } from '../components/Card';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { formatCurrency } from '../utils/format';
@@ -37,6 +38,9 @@ export default function Reports() {
   const now = new Date();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(now), 'yyyy-MM-dd'));
   const [dateTo, setDateTo] = useState(format(endOfMonth(now), 'yyyy-MM-dd'));
+
+  const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
+  const currency = accounts?.[0]?.currency || 'USD';
 
   const { data: spending, isLoading: spendLoading } = useQuery({
     queryKey: ['reports', 'spending', dateFrom, dateTo],
@@ -139,13 +143,13 @@ export default function Reports() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-sm text-gray-500 mb-1">Total Income</p>
             <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(incomeExpenses?.income ?? 0)}
+              {formatCurrency(incomeExpenses?.income ?? 0, currency)}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-sm text-gray-500 mb-1">Total Expenses</p>
             <p className="text-2xl font-bold text-red-500">
-              {formatCurrency(incomeExpenses?.expenses ?? 0)}
+              {formatCurrency(incomeExpenses?.expenses ?? 0, currency)}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -155,7 +159,7 @@ export default function Reports() {
                 (incomeExpenses?.net ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'
               }`}
             >
-              {formatCurrency(incomeExpenses?.net ?? 0)}
+              {formatCurrency(incomeExpenses?.net ?? 0, currency)}
             </p>
           </div>
         </div>
@@ -185,7 +189,7 @@ export default function Reports() {
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v), currency)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -200,7 +204,7 @@ export default function Reports() {
                       <span className="text-sm text-gray-700">{item.name}</span>
                     </div>
                     <span className="text-sm font-medium text-gray-800">
-                      {formatCurrency(item.value)}
+                      {formatCurrency(item.value, currency)}
                     </span>
                   </div>
                 ))}
@@ -219,7 +223,7 @@ export default function Reports() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                <Tooltip formatter={(v) => formatCurrency(Number(v), currency)} />
                 <Legend />
                 <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -239,7 +243,7 @@ export default function Reports() {
             <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-xl">
               <span className="font-semibold text-indigo-800">Total Net Worth</span>
               <span className="text-xl font-bold text-indigo-900">
-                {formatCurrency(netWorth?.total ?? 0)}
+                {formatCurrency(netWorth?.total ?? 0, currency)}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -256,7 +260,7 @@ export default function Reports() {
                       (amount as number) < 0 ? 'text-red-600' : 'text-gray-800'
                     }`}
                   >
-                    {formatCurrency(amount as number)}
+                    {formatCurrency(amount as number, currency)}
                   </span>
                 </div>
               ))}
@@ -284,7 +288,7 @@ export default function Reports() {
                     </span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-500">
-                        {formatCurrency(bp.spent)} / {formatCurrency(bp.budgeted)}
+                        {formatCurrency(bp.spent, currency)} / {formatCurrency(bp.budgeted, currency)}
                       </span>
                       {isOver && (
                         <span className="text-xs font-medium text-red-600">Over!</span>

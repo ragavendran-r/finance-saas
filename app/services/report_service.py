@@ -16,18 +16,24 @@ class ReportService:
 
     async def spending_by_category(self, tenant_id: uuid.UUID, date_from: date, date_to: date) -> list[dict]:
         result = await self.db.execute(
-            select(Category.name, func.sum(Transaction.amount).label("total"))
-            .join(Transaction, Transaction.category_id == Category.id)
+            select(Category.id, Category.name, func.sum(Transaction.amount).label("total"))
+            .outerjoin(Category, Transaction.category_id == Category.id)
             .where(
                 Transaction.tenant_id == tenant_id,
                 Transaction.type == TransactionType.DEBIT,
                 Transaction.date >= date_from,
                 Transaction.date <= date_to,
             )
-            .group_by(Category.name)
+            .group_by(Category.id, Category.name)
             .order_by(func.sum(Transaction.amount).desc())
         )
-        return [{"category": row.name, "total": row.total} for row in result]
+        return [
+            {
+                "category": {"id": str(row.id), "name": row.name} if row.id else None,
+                "total": row.total,
+            }
+            for row in result
+        ]
 
     async def income_vs_expenses(self, tenant_id: uuid.UUID, date_from: date, date_to: date) -> dict:
         async def total_by_type(txn_type: TransactionType) -> Decimal:

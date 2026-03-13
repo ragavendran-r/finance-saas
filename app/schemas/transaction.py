@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models.transaction import TransactionType
 
@@ -12,6 +12,11 @@ class TransactionCreate(BaseModel):
     category_id: uuid.UUID | None = None
     amount: Decimal
     type: TransactionType
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: str) -> str:
+        return v.lower() if isinstance(v, str) else v
     description: str
     merchant: str | None = None
     date: date

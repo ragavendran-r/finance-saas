@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models.account import AccountType
 
@@ -10,6 +10,11 @@ from app.models.account import AccountType
 class AccountCreate(BaseModel):
     name: str
     type: AccountType
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: str) -> str:
+        return v.lower() if isinstance(v, str) else v
     currency: str = "USD"
     balance: Decimal = Decimal("0")
     institution_name: str | None = None
