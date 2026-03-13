@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Menu,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/categories', label: 'Categories', icon: Tag },
   { to: '/budgets', label: 'Budgets', icon: Target },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/tax-advisory', label: 'Tax Advisor', icon: Sparkles },
   { to: '/users', label: 'Users', icon: Users },
 ];
 
