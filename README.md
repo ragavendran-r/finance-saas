@@ -6,6 +6,7 @@ Multi-tenant personal finance management platform built with FastAPI, SQLAlchemy
 
 - **Backend**: FastAPI, SQLAlchemy (async), Alembic, PostgreSQL, JWT auth
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts
+- **AI**: Google Gemini, OpenAI, Anthropic Claude (pluggable LLM provider)
 
 ## Prerequisites
 
@@ -39,6 +40,12 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ENVIRONMENT=development
+
+# LLM provider for AI Tax Advisory (choose one: gemini | openai | anthropic)
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=<your_gemini_api_key>
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
 ```
 
 ### 4. Start PostgreSQL
@@ -114,7 +121,26 @@ npm run build
 - **Categories** — Hierarchical categories with icon and color support
 - **Budgets** — Weekly/monthly/yearly budgets with real-time progress tracking
 - **Reports** — Spending by category, income vs expenses, net worth, budget vs actual
+- **AI Tax Advisory** — Personalised Indian tax-saving recommendations for FY 2025-26 powered by LLM; supports New and Old tax regimes, auto-derives projected annual income from transaction history, and provides section-wise deduction suggestions (80C, 80D, NPS, HRA, etc.)
 - **Multi-tenant** — Isolated data per tenant with role-based access (superadmin, admin, member)
+
+## AI Tax Advisory
+
+The Tax Recommendations page uses a pluggable LLM backend to generate personalised Indian tax-saving advice.
+
+### Supported providers
+
+| Provider | `LLM_PROVIDER` value | Key env var | Default model |
+|---|---|---|---|
+| Google Gemini | `gemini` | `GEMINI_API_KEY` | `gemini-2.5-flash` |
+| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-4o-mini` |
+| Anthropic Claude | `anthropic` | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001` |
+
+Set `LLM_PROVIDER` and the corresponding API key in your `.env` file. The provider models can be overridden via `LLM_MODEL_GEMINI`, `LLM_MODEL_OPENAI`, and `LLM_MODEL_ANTHROPIC` in `app/config.py`.
+
+### How income is derived
+
+If no income is entered manually, the service calculates a projected annual income from the current financial year's credit transactions: average monthly credit (across months that actually have credits) × 12. The derived figure is displayed on the page before submission and can be overridden via the "Override income manually" toggle.
 
 ## Development
 
