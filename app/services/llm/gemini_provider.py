@@ -20,7 +20,8 @@ class GeminiProvider(LLMProvider):
                 contents=user,
                 config=types.GenerateContentConfig(
                     system_instruction=system,
-                    max_output_tokens=2048,
+                    max_output_tokens=8192,
+                    response_mime_type="application/json",
                 ),
             ),
         )

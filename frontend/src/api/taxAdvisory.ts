@@ -36,9 +36,20 @@ export interface TaxAdvisoryRequest {
   regime_preference: 'new' | 'old';
 }
 
+export interface IncomeProjection {
+  avg_monthly_credit: number;
+  annual_projection: number;
+  months_with_credits: number;
+}
+
 export const taxAdvisoryApi = {
   getRecommendations: async (payload: TaxAdvisoryRequest): Promise<TaxAdvisoryResponse> => {
     const { data } = await apiClient.post<TaxAdvisoryResponse>('/tax-advisory/recommendations', payload);
+    return data;
+  },
+
+  getIncomeProjection: async (): Promise<IncomeProjection> => {
+    const { data } = await apiClient.get<IncomeProjection>('/tax-advisory/income-projection');
     return data;
   },
 };

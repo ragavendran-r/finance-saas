@@ -18,3 +18,9 @@ class TaxRecommendationResponse(BaseModel):
     annual_income_used: Decimal
     llm_provider: str
     result: dict  # raw structured JSON from the LLM
+
+
+class IncomeProjectionResponse(BaseModel):
+    avg_monthly_credit: Decimal
+    annual_projection: Decimal
+    months_with_credits: int

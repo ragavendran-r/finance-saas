@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,6 +11,8 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  SlidersHorizontal,
+  Wallet,
 } from 'lucide-react';
 import { taxAdvisoryApi, type TaxAdvisoryRequest, type TaxRecommendation } from '../api/taxAdvisory';
 import { Button } from '../components/Button';
@@ -18,9 +20,12 @@ import { FormField, Input, Select } from '../components/FormField';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { formatCurrency } from '../utils/format';
 
+const emptyToUndefined = (v: unknown) =>
+  v === '' || v === null || v === undefined ? undefined : Number(v);
+
 const schema = z.object({
-  annual_income: z.coerce.number().min(0).optional(),
-  age: z.coerce.number().min(1).max(120).optional(),
+  annual_income: z.preprocess(emptyToUndefined, z.number().min(0).optional()),
+  age: z.preprocess(emptyToUndefined, z.number().min(1).max(120).optional()),
   regime_preference: z.enum(['new', 'old']),
 });
 
@@ -94,6 +99,17 @@ function RecommendationCard({ rec }: { rec: TaxRecommendation }) {
 }
 
 export default function TaxAdvisory() {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Income projection from backend (avg monthly credit × 12, based on months with actual credits)
+  const { data: projection, isLoading: projectionLoading } = useQuery({
+    queryKey: ['tax-advisory', 'income-projection'],
+    queryFn: taxAdvisoryApi.getIncomeProjection,
+  });
+  const avgMonthlyCredit = projection?.avg_monthly_credit ?? 0;
+  const derivedIncome = projection?.annual_projection ?? 0;
+  const monthsWithCredits = projection?.months_with_credits ?? 0;
+
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
@@ -112,7 +128,26 @@ export default function TaxAdvisory() {
     });
   };
 
-  const result = mutation.data?.result;
+  const rawResult = mutation.data?.result;
+
+  // If the backend fallback put JSON into summary, recover it on the frontend
+  const result = useMemo(() => {
+    if (!rawResult) return null;
+    if ((rawResult.recommendations?.length ?? 0) > 0) return rawResult;
+    const summary = rawResult.summary?.trim() ?? '';
+    if (summary.startsWith('{') || summary.startsWith('```')) {
+      try {
+        const cleaned = summary.replace(/```json\n?|```/g, '');
+        const start = cleaned.indexOf('{');
+        const end = cleaned.lastIndexOf('}');
+        if (start !== -1 && end > start) {
+          const parsed = JSON.parse(cleaned.slice(start, end + 1));
+          return { ...rawResult, ...parsed };
+        }
+      } catch { /* fall through */ }
+    }
+    return rawResult;
+  }, [rawResult]);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -120,30 +155,42 @@ export default function TaxAdvisory() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-indigo-500" />
-          AI Tax Advisor
+          Tax Recommendations
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           Personalised Indian tax-saving recommendations for FY 2025-26 powered by AI.
         </p>
       </div>
 
+      {/* Derived income banner */}
+      <div className="flex items-center gap-4 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+        <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+          <Wallet className="w-5 h-5 text-indigo-600" />
+        </div>
+        {projectionLoading ? (
+          <p className="text-sm text-indigo-400">Calculating from transactions…</p>
+        ) : (
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-indigo-500 font-medium mb-0.5">Projected Annual Income (FY 2025-26)</p>
+            <p className="text-xl font-bold text-indigo-700">{formatCurrency(derivedIncome, 'INR')}</p>
+            <p className="text-xs text-indigo-400 mt-0.5">
+              {formatCurrency(avgMonthlyCredit, 'INR')} avg/month × 12
+              &nbsp;·&nbsp; {monthsWithCredits} month{monthsWithCredits !== 1 ? 's' : ''} with credits
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Input Form */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-semibold text-gray-800 mb-4">Your Details</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <FormField
-              label="Annual Income (₹)"
-              error={errors.annual_income?.message}
-            >
-              <Input
-                type="number"
-                placeholder="Auto-detect from transactions"
-                min="0"
-                step="1000"
-                error={!!errors.annual_income}
-                {...register('annual_income')}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Preferred Regime" error={errors.regime_preference?.message} required>
+              <Select error={!!errors.regime_preference} {...register('regime_preference')}>
+                <option value="new">New Regime (Default)</option>
+                <option value="old">Old Regime</option>
+              </Select>
             </FormField>
             <FormField label="Age" error={errors.age?.message}>
               <Input
@@ -155,16 +202,35 @@ export default function TaxAdvisory() {
                 {...register('age')}
               />
             </FormField>
-            <FormField label="Preferred Regime" error={errors.regime_preference?.message} required>
-              <Select error={!!errors.regime_preference} {...register('regime_preference')}>
-                <option value="new">New Regime (Default)</option>
-                <option value="old">Old Regime</option>
-              </Select>
-            </FormField>
           </div>
-          <p className="text-xs text-gray-400">
-            Leave Annual Income blank to auto-calculate from your credit transactions this financial year.
-          </p>
+
+          {/* Advanced income override */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              {showAdvanced ? 'Hide income override' : 'Override income manually'}
+              {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            {showAdvanced && (
+              <div className="mt-3 max-w-xs">
+                <FormField label="Annual Income (₹)" error={errors.annual_income?.message}>
+                  <Input
+                    type="number"
+                    placeholder={`Auto: ${formatCurrency(derivedIncome, 'INR')}`}
+                    min="0"
+                    step="1000"
+                    error={!!errors.annual_income}
+                    {...register('annual_income')}
+                  />
+                </FormField>
+              </div>
+            )}
+          </div>
+
           {mutation.error && (
             <ErrorAlert message="Failed to get recommendations. Check that your LLM API key is configured." />
           )}
@@ -273,8 +339,8 @@ export default function TaxAdvisory() {
             </div>
           )}
 
-          {/* Summary */}
-          {result.summary && (
+          {/* Summary — only show if it's plain text, not raw JSON/fences */}
+          {result.summary && !result.summary.trim().startsWith('{') && !result.summary.trim().startsWith('```') && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h2 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-400" />

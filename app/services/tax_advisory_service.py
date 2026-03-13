@@ -56,6 +56,11 @@ Major deductions available:
 - Sec 80G: donations to eligible institutions (50% or 100% deduction)
 - Sec 80E: interest on education loan (no upper limit, 8 years)
 
+## Important Instructions
+- **Always set `regime_recommendation` to the user's stated `regime_preference`.** Do not override it.
+- Provide tax-saving strategies that work within the user's chosen regime.
+- You may note in `regime_reasoning` if the other regime would be mathematically cheaper, but the primary recommendations must be tailored to the user's preferred regime.
+
 ## Response Format
 Return ONLY a valid JSON object (no markdown fences, no preamble) with this exact structure:
 {
@@ -110,19 +115,41 @@ class TaxAdvisoryService:
         self.db = db
         self.llm = get_llm_provider()
 
-    async def _annual_income_from_transactions(self, tenant_id: uuid.UUID) -> Decimal:
-        """Sum of CREDIT transactions in the current financial year as a fallback."""
+    async def income_projection(self, tenant_id: uuid.UUID) -> dict:
+        """Return avg monthly credit and annual projection based on months that have credits."""
         from datetime import date
+        from sqlalchemy import func as sqlfunc
         today = date.today()
         fy_start = date(today.year if today.month >= 4 else today.year - 1, 4, 1)
-        result = await self.db.execute(
-            select(func.sum(Transaction.amount)).where(
-                Transaction.tenant_id == tenant_id,
-                Transaction.type == TransactionType.CREDIT,
-                Transaction.date >= fy_start,
-            )
+        base_filter = [
+            Transaction.tenant_id == tenant_id,
+            Transaction.type == TransactionType.CREDIT,
+            Transaction.date >= fy_start,
+            Transaction.date <= today,
+        ]
+        # Total YTD credits
+        total_result = await self.db.execute(
+            select(func.sum(Transaction.amount)).where(*base_filter)
         )
-        return result.scalar() or Decimal("0")
+        ytd = total_result.scalar() or Decimal("0")
+        # Count distinct months that have at least one credit
+        months_result = await self.db.execute(
+            select(sqlfunc.count(sqlfunc.distinct(
+                sqlfunc.date_trunc("month", Transaction.date)
+            ))).where(*base_filter)
+        )
+        months_with_credits = max(1, months_result.scalar() or 0)
+        avg_monthly = (ytd / months_with_credits).quantize(Decimal("1"))
+        annual = avg_monthly * 12
+        return {
+            "avg_monthly_credit": avg_monthly,
+            "annual_projection": annual,
+            "months_with_credits": months_with_credits,
+        }
+
+    async def _annual_income_from_transactions(self, tenant_id: uuid.UUID) -> Decimal:
+        projection = await self.income_projection(tenant_id)
+        return projection["annual_projection"]
 
     async def get_recommendations(
         self,
@@ -137,18 +164,21 @@ class TaxAdvisoryService:
         age_context = f"The taxpayer is {age} years old." if age else ""
         user_prompt = (
             f"Annual income: ₹{annual_income:,.0f}. "
-            f"Preferred regime: {regime_preference}. "
+            f"Chosen regime: {regime_preference} (set regime_recommendation to '{regime_preference}'). "
             f"{age_context} "
-            "Please provide personalised tax-saving recommendations."
+            "Provide personalised tax-saving recommendations for the chosen regime."
         )
 
         raw = await self.llm.complete(system=_SYSTEM_PROMPT, user=user_prompt)
 
-        # Extract JSON — strip any accidental markdown fences
-        json_str = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
+        # Strip markdown fences if present, then extract between first { and last }
+        cleaned = re.sub(r"```(?:json)?", "", raw).strip()
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        json_str = cleaned[start : end + 1] if start != -1 and end > start else cleaned
         try:
             return json.loads(json_str)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, ValueError):
             # Graceful degradation: return raw text wrapped in summary field
             return {
                 "regime_recommendation": regime_preference,

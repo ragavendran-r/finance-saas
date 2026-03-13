@@ -5,10 +5,20 @@ from app.config import get_settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.tax_advisory import TaxRecommendationRequest, TaxRecommendationResponse
+from app.schemas.tax_advisory import IncomeProjectionResponse, TaxRecommendationRequest, TaxRecommendationResponse
 from app.services.tax_advisory_service import TaxAdvisoryService
 
 router = APIRouter()
+
+
+@router.get("/income-projection", response_model=IncomeProjectionResponse)
+async def get_income_projection(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = TaxAdvisoryService(db)
+    data = await service.income_projection(current_user.tenant_id)
+    return IncomeProjectionResponse(**data)
 
 
 @router.post("/recommendations", response_model=TaxRecommendationResponse)

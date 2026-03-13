@@ -1,4 +1,5 @@
 """Tests for the AI tax advisory endpoint and service."""
+
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -45,6 +46,7 @@ def _mock_llm(response_dict: dict):
 
 
 # ── Endpoint tests ────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_tax_recommendations_with_explicit_income(client):
@@ -146,6 +148,7 @@ async def test_tax_recommendations_llm_provider_in_response(client):
 
 # ── Service-level: graceful degradation ──────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_tax_recommendations_invalid_json_from_llm(client):
     """If the LLM returns non-JSON text the service falls back gracefully."""
@@ -196,8 +199,10 @@ async def test_tax_recommendations_llm_json_in_markdown_fence(client):
 
 # ── LLM factory tests ─────────────────────────────────────────────────────────
 
+
 def _make_mock_settings(**kwargs):
     from unittest.mock import MagicMock
+
     s = MagicMock()
     defaults = {
         "LLM_PROVIDER": "anthropic",
@@ -206,7 +211,7 @@ def _make_mock_settings(**kwargs):
         "OPENAI_API_KEY": "test-key",
         "LLM_MODEL_OPENAI": "gpt-4o",
         "GEMINI_API_KEY": "test-key",
-        "LLM_MODEL_GEMINI": "gemini-2.0-flash",
+        "LLM_MODEL_GEMINI": "gemini-2.5-flash",
     }
     defaults.update(kwargs)
     for k, v in defaults.items():
@@ -217,39 +222,55 @@ def _make_mock_settings(**kwargs):
 def test_factory_returns_anthropic_by_default():
     from app.services.llm.factory import get_llm_provider
 
-    with patch("app.services.llm.factory.get_settings", return_value=_make_mock_settings(LLM_PROVIDER="anthropic")):
+    with patch(
+        "app.services.llm.factory.get_settings",
+        return_value=_make_mock_settings(LLM_PROVIDER="anthropic"),
+    ):
         provider = get_llm_provider()
 
     from app.services.llm.anthropic_provider import AnthropicProvider
+
     assert isinstance(provider, AnthropicProvider)
 
 
 def test_factory_returns_openai_provider():
     from app.services.llm.factory import get_llm_provider
 
-    with patch("app.services.llm.factory.get_settings", return_value=_make_mock_settings(LLM_PROVIDER="openai")):
+    with patch(
+        "app.services.llm.factory.get_settings",
+        return_value=_make_mock_settings(LLM_PROVIDER="openai"),
+    ):
         provider = get_llm_provider()
 
     from app.services.llm.openai_provider import OpenAIProvider
+
     assert isinstance(provider, OpenAIProvider)
 
 
 def test_factory_returns_gemini_provider():
     from app.services.llm.factory import get_llm_provider
 
-    with patch("app.services.llm.factory.get_settings", return_value=_make_mock_settings(LLM_PROVIDER="gemini")):
+    with patch(
+        "app.services.llm.factory.get_settings",
+        return_value=_make_mock_settings(LLM_PROVIDER="gemini"),
+    ):
         with patch("app.services.llm.gemini_provider.genai"):
             provider = get_llm_provider()
 
     from app.services.llm.gemini_provider import GeminiProvider
+
     assert isinstance(provider, GeminiProvider)
 
 
 def test_factory_falls_back_to_anthropic_for_unknown_provider():
     from app.services.llm.factory import get_llm_provider
 
-    with patch("app.services.llm.factory.get_settings", return_value=_make_mock_settings(LLM_PROVIDER="unknown")):
+    with patch(
+        "app.services.llm.factory.get_settings",
+        return_value=_make_mock_settings(LLM_PROVIDER="unknown"),
+    ):
         provider = get_llm_provider()
 
     from app.services.llm.anthropic_provider import AnthropicProvider
+
     assert isinstance(provider, AnthropicProvider)
