@@ -1,3 +1,14 @@
 {
-  "python.defaultInterpreterPath": "/Users/ragaven/work/finance-saas/.venv/bin/python"
+  "python.defaultInterpreterPath": "/Users/ragaven/work/finance-saas/.venv/bin/python",
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.coverage": true,
+    "**/htmlcov": true,
+    "**/frontend/coverage": true,
+    "**/.env": false
+  }
 }
