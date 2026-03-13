@@ -206,7 +206,7 @@ def _make_mock_settings(**kwargs):
         "OPENAI_API_KEY": "test-key",
         "LLM_MODEL_OPENAI": "gpt-4o",
         "GEMINI_API_KEY": "test-key",
-        "LLM_MODEL_GEMINI": "gemini-1.5-pro",
+        "LLM_MODEL_GEMINI": "gemini-2.0-flash",
     }
     defaults.update(kwargs)
     for k, v in defaults.items():
