@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Google Gemini
     GEMINI_API_KEY: str = ""
-    LLM_MODEL_GEMINI: str = "gemini-2.0-flash"
+    LLM_MODEL_GEMINI: str = "gemini-2.5-flash"
 
     class Config:
         env_file = ".env"
