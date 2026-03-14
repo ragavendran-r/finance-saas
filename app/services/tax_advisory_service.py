@@ -171,8 +171,14 @@ class TaxAdvisoryService:
 
         raw = await self.llm.complete(system=_SYSTEM_PROMPT, user=user_prompt)
 
-        # Strip markdown fences if present, then extract between first { and last }
-        cleaned = re.sub(r"```(?:json)?", "", raw).strip()
+        # Strip markdown fences if present, then parse JSON
+        cleaned = re.sub(r"```(?:json)?\n?", "", raw).strip().strip("\ufeff")
+        # Try direct parse first (works for Gemini which returns clean JSON)
+        try:
+            return json.loads(cleaned)
+        except (json.JSONDecodeError, ValueError):
+            pass
+        # Fall back to extracting between first { and last }
         start = cleaned.find("{")
         end = cleaned.rfind("}")
         json_str = cleaned[start : end + 1] if start != -1 and end > start else cleaned

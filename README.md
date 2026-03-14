@@ -150,6 +150,7 @@ npm run build
 - **Budgets** — Weekly/monthly/yearly budgets with real-time progress tracking
 - **Reports** — Spending by category, income vs expenses, net worth, budget vs actual
 - **AI Tax Advisory** — Personalised Indian tax-saving recommendations for FY 2025-26 powered by LLM; supports New and Old tax regimes, auto-derives projected annual income from transaction history, and provides section-wise deduction suggestions (80C, 80D, NPS, HRA, etc.)
+- **AI Spend Advisory** — LLM-generated monthly and annual spend recommendations; analyses income, categorised expenses, and budget allocations to surface over-budget categories, budget adjustment advice (increase / decrease / on-track), and concrete saving actions
 - **Multi-tenant** — Isolated data per tenant with role-based access (superadmin, admin, member)
 
 ## AI Tax Advisory
@@ -169,6 +170,18 @@ Set `LLM_PROVIDER` and the corresponding API key in your `.env` file. The provid
 ### How income is derived
 
 If no income is entered manually, the service calculates a projected annual income from the current financial year's credit transactions: average monthly credit (across months that actually have credits) × 12. The derived figure is displayed on the page before submission and can be overridden via the "Override income manually" toggle.
+
+## AI Spend Advisory
+
+The Reports page includes an AI Spend Recommendations panel that analyses the current user's transactions and budgets over a configurable date range (default: last 90 days) and returns:
+
+- **Monthly summary** — average income, expenses, savings, and savings rate
+- **Annual projection** — extrapolated income, expenses, and savings
+- **Over-budget categories** — categories where actual spend exceeds the budget
+- **Budget allocation advice** — per-category verdict (`increase`, `decrease`, `on_track`, or `set_budget`) with a plain-English reason
+- **Spending recommendations** — prioritised actions (reduce, reallocate, save, invest) with estimated monthly impact
+
+The same pluggable LLM backend used by the Tax Advisory powers this feature — set `LLM_PROVIDER` and the corresponding API key (see table above).
 
 ## Development
 
