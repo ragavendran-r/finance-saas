@@ -2,7 +2,6 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-import pytest
 from jose import jwt
 
 from app.config import get_settings
