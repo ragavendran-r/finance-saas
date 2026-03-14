@@ -296,7 +296,7 @@ flowchart TD
     L2 --> M
     L3 --> M
 
-    M --> N[Strip markdown fences\nExtract first { last }]
+    M --> N[Strip markdown fences\nExtract outermost JSON object]
     N --> O{JSON valid?}
     O -->|yes| P[Structured TaxResult]
     O -->|no| Q[Fallback: wrap in summary field]
