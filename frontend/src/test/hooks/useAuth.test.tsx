@@ -4,6 +4,7 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '../../hooks/useAuth'
+import { setAccessToken } from '../../api/client'
 import { server } from '../mocks/server'
 import { http, HttpResponse } from 'msw'
 import { mockUser } from '../mocks/handlers'
@@ -37,16 +38,14 @@ function makeWrapper() {
 describe('useAuth', () => {
   beforeEach(() => {
     server.listen({ onUnhandledRequest: 'bypass' })
-    localStorage.clear()
   })
   afterEach(() => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    setAccessToken(null)
   })
 
   it('throws when used outside AuthProvider', () => {
-    // Suppress console.error for this test
     const originalError = console.error
     console.error = () => {}
     expect(() => {
@@ -55,8 +54,13 @@ describe('useAuth', () => {
     console.error = originalError
   })
 
-  it('starts unauthenticated when no token in localStorage', async () => {
-    localStorage.removeItem('access_token')
+  it('starts unauthenticated when refresh cookie is absent/invalid', async () => {
+    // Override refresh to simulate no valid cookie
+    server.use(
+      http.post(`${BASE}/auth/refresh`, () =>
+        HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+      )
+    )
     render(<TestComponent />, { wrapper: makeWrapper() })
 
     await waitFor(() => {
@@ -67,8 +71,8 @@ describe('useAuth', () => {
     expect(screen.getByTestId('user-email').textContent).toBe('none')
   })
 
-  it('fetches user when token exists in localStorage', async () => {
-    localStorage.setItem('access_token', 'valid-token')
+  it('fetches user when refresh cookie is valid', async () => {
+    // Default handler returns a valid token and /auth/me returns mockUser
     render(<TestComponent />, { wrapper: makeWrapper() })
 
     await waitFor(() => {
@@ -78,7 +82,13 @@ describe('useAuth', () => {
     expect(screen.getByTestId('authenticated').textContent).toBe('true')
   })
 
-  it('login sets token and fetches user', async () => {
+  it('login sets token in memory and fetches user', async () => {
+    // Start unauthenticated
+    server.use(
+      http.post(`${BASE}/auth/refresh`, () =>
+        HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+      )
+    )
     const user = userEvent.setup()
     render(<TestComponent />, { wrapper: makeWrapper() })
 
@@ -92,13 +102,11 @@ describe('useAuth', () => {
       expect(screen.getByTestId('user-email').textContent).toBe(mockUser.email)
     })
 
-    expect(localStorage.getItem('access_token')).toBe('test-token')
     expect(screen.getByTestId('authenticated').textContent).toBe('true')
   })
 
   it('logout clears token and user', async () => {
     const user = userEvent.setup()
-    localStorage.setItem('access_token', 'valid-token')
     render(<TestComponent />, { wrapper: makeWrapper() })
 
     await waitFor(() => {
@@ -111,12 +119,10 @@ describe('useAuth', () => {
       expect(screen.getByTestId('authenticated').textContent).toBe('false')
     })
 
-    expect(localStorage.getItem('access_token')).toBeNull()
     expect(screen.getByTestId('user-email').textContent).toBe('none')
   })
 
   it('clears token when /auth/me fails', async () => {
-    localStorage.setItem('access_token', 'bad-token')
     server.use(
       http.get(`${BASE}/auth/me`, () =>
         HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })

@@ -86,6 +86,10 @@ export const handlers = [
   ),
   http.post(`${BASE}/auth/register`, () => HttpResponse.json(mockUser, { status: 201 })),
   http.post(`${BASE}/auth/logout`, () => HttpResponse.json({})),
+  // Default: refresh succeeds — tests that need an unauthenticated state override this
+  http.post(`${BASE}/auth/refresh`, () =>
+    HttpResponse.json({ access_token: 'test-token', token_type: 'bearer' })
+  ),
   http.get(`${BASE}/auth/me`, () => HttpResponse.json(mockUser)),
 
   // Accounts

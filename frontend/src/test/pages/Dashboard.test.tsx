@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Dashboard from '../../pages/Dashboard'
 import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
+import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
 import { mockNetWorth, mockIncomeVsExpenses } from '../mocks/handlers'
 
@@ -27,12 +28,11 @@ function renderDashboard() {
 describe('Dashboard page', () => {
   beforeEach(() => {
     server.listen({ onUnhandledRequest: 'bypass' })
-    localStorage.setItem('access_token', 'valid-token')
   })
   afterEach(() => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    setAccessToken(null)
   })
 
   it('shows loading state initially', () => {

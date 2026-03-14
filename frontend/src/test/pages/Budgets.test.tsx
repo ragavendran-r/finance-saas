@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Budgets from '../../pages/Budgets'
 import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
+import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
 import { mockBudget, mockBudgetProgress } from '../mocks/handlers'
 
@@ -28,12 +29,11 @@ function renderBudgets() {
 describe('Budgets page', () => {
   beforeEach(() => {
     server.listen({ onUnhandledRequest: 'bypass' })
-    localStorage.setItem('access_token', 'valid-token')
   })
   afterEach(() => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    setAccessToken(null)
   })
 
   it('renders the Budgets heading', async () => {
