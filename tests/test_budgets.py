@@ -1,4 +1,5 @@
 """Integration tests for budgets endpoints."""
+from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -199,13 +200,16 @@ async def test_budget_progress_with_spending(client):
     cat = await create_category(client, token, name="Budget Cat")
     account = await create_account(client, token)
 
+    today = date.today()
+    month_start = today.replace(day=1).isoformat()
+
     budget_resp = await create_budget(
         client, token, cat["id"],
-        amount="500.00", start_date="2025-01-01"
+        amount="500.00", start_date=month_start
     )
     budget_id = budget_resp.json()["id"]
 
-    # Create a DEBIT transaction with matching category
+    # Create a DEBIT transaction within the current month
     await client.post(
         "/api/v1/transactions",
         json={
@@ -214,7 +218,7 @@ async def test_budget_progress_with_spending(client):
             "amount": "200.00",
             "type": "debit",
             "description": "Budget spending",
-            "date": "2025-01-15",
+            "date": today.isoformat(),
         },
         headers=auth_headers(token),
     )
