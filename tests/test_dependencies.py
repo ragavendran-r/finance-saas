@@ -30,7 +30,7 @@ class TestGetCurrentUserPayload:
 
     @pytest.mark.asyncio
     async def test_token_without_sub_raises_401(self):
-        from jose import jwt
+        import jwt
         from app.config import get_settings
         settings = get_settings()
         # Token without "sub" claim
