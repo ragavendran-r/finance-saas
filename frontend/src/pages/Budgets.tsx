@@ -27,7 +27,10 @@ const schema = z.object({
 });
 
 const editSchema = z.object({
+  category_id: z.string().min(1, 'Category required'),
   amount: z.coerce.number().positive('Amount must be positive'),
+  period: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']),
+  start_date: z.string().min(1, 'Start date required'),
   end_date: z.string().optional(),
 });
 
@@ -91,7 +94,10 @@ export default function Budgets() {
   const openEdit = (budget: Budget) => {
     setEditBudget(budget);
     editForm.reset({
+      category_id: budget.category_id,
       amount: budget.amount,
+      period: budget.period.toUpperCase() as 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+      start_date: budget.start_date?.split('T')[0] || '',
       end_date: budget.end_date?.split('T')[0] || '',
     });
   };
@@ -188,12 +194,34 @@ export default function Budgets() {
           className="space-y-4"
         >
           {updateMutation.error && <ErrorAlert message="Failed to update budget." />}
-          <FormField label="Amount" error={editForm.formState.errors.amount?.message} required>
-            <Input type="number" step="0.01" min="0" error={!!editForm.formState.errors.amount} {...editForm.register('amount')} />
+          <FormField label="Category" error={editForm.formState.errors.category_id?.message} required>
+            <Select error={!!editForm.formState.errors.category_id} {...editForm.register('category_id')}>
+              <option value="">Select category</option>
+              {(categories ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+              ))}
+            </Select>
           </FormField>
-          <FormField label="End Date (optional)">
-            <Input type="date" {...editForm.register('end_date')} />
-          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Amount" error={editForm.formState.errors.amount?.message} required>
+              <Input type="number" step="0.01" min="0" error={!!editForm.formState.errors.amount} {...editForm.register('amount')} />
+            </FormField>
+            <FormField label="Period" error={editForm.formState.errors.period?.message} required>
+              <Select error={!!editForm.formState.errors.period} {...editForm.register('period')}>
+                <option value="WEEKLY">Weekly</option>
+                <option value="MONTHLY">Monthly</option>
+                <option value="YEARLY">Yearly</option>
+              </Select>
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Start Date" error={editForm.formState.errors.start_date?.message} required>
+              <Input type="date" error={!!editForm.formState.errors.start_date} {...editForm.register('start_date')} />
+            </FormField>
+            <FormField label="End Date (optional)">
+              <Input type="date" {...editForm.register('end_date')} />
+            </FormField>
+          </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setEditBudget(null)}>Cancel</Button>
             <Button type="submit" isLoading={updateMutation.isPending}>Save Changes</Button>

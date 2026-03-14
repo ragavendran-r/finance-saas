@@ -82,6 +82,17 @@ createdb finance_saas
 alembic upgrade head
 ```
 
+This also seeds the database with a test user and sample data for development:
+
+| Field    | Value                |
+|----------|----------------------|
+| Email    | `testuser@abc.com`   |
+| Password | `pwd123`             |
+| Tenant   | Test Corp            |
+| Role     | Admin                |
+
+The seed includes 5 accounts, 12 months of transactions (FY 2025-26), and 12 monthly budgets — enough data to explore all reports and budget features out of the box.
+
 ### 7. Start the API server
 
 ```bash
