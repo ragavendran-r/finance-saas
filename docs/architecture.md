@@ -14,8 +14,8 @@ graph TB
     subgraph BROWSER["🌐 Browser"]
         direction TB
         subgraph FE["Frontend — React 18 + TypeScript + Vite"]
-            PAGES["📄 Pages<br/>Dashboard · Accounts · Transactions<br/>Budgets · Reports · Tax Advisory"]
-            QUERY["🔄 TanStack React Query<br/>Server-state cache · stale-while-revalidate"]
+            PAGES["📄 Pages<br/>Dashboard · Accounts · Transactions<br/>Budgets · Reports · Tax Advisory · Spend Advisory"]
+            QUERY["🔄 TanStack React Query<br/>Server-state cache · 2-min staleTime<br/>Shared useCategories hook"]
             CLIENT["🔒 Axios Client<br/>JWT attach · proactive refresh<br/>30-min idle timeout"]
         end
     end
@@ -30,6 +30,7 @@ graph TB
             BUD_EP["📊 /budgets<br/>CRUD · progress"]
             REP_EP["📈 /reports<br/>spending · income · net-worth · budget-vs-actual"]
             TAX_EP["🤖 /tax-advisory<br/>income-projection · recommendations"]
+            SPEND_EP["💡 /spend-advisory<br/>recommendations"]
             USR_EP["👤 /users<br/>admin only"]
         end
 
@@ -41,12 +42,13 @@ graph TB
             BUD_SVC["BudgetService"]
             REP_SVC["ReportService"]
             TAX_SVC["TaxAdvisoryService<br/>income projection · LLM prompt"]
+            SPEND_SVC["SpendAdvisoryService<br/>spend analysis · LLM prompt"]
             LLM_FAC["LLM Factory<br/>get_llm_provider()"]
         end
     end
 
     subgraph DATA["💾 Data Layer"]
-        PG[("PostgreSQL 16<br/>asyncpg + SQLAlchemy 2.0")]
+        PG[("PostgreSQL 16<br/>asyncpg + SQLAlchemy 2.0<br/>Connection pool · Composite indexes")]
         ALEMBIC["Alembic<br/>Migrations"]
     end
 
@@ -65,6 +67,7 @@ graph TB
     CLIENT -- "HTTPS + Bearer token" --> BUD_EP
     CLIENT -- "HTTPS + Bearer token" --> REP_EP
     CLIENT -- "HTTPS + Bearer token" --> TAX_EP
+    CLIENT -- "HTTPS + Bearer token" --> SPEND_EP
     CLIENT -- "HTTPS + Bearer token" --> USR_EP
 
     AUTH_EP --> AUTH_SVC
@@ -74,7 +77,9 @@ graph TB
     BUD_EP --> BUD_SVC
     REP_EP --> REP_SVC
     TAX_EP --> TAX_SVC
+    SPEND_EP --> SPEND_SVC
     TAX_SVC --> LLM_FAC
+    SPEND_SVC --> LLM_FAC
 
     AUTH_SVC --> PG
     ACCT_SVC --> PG
@@ -83,6 +88,7 @@ graph TB
     BUD_SVC --> PG
     REP_SVC --> PG
     TAX_SVC --> PG
+    SPEND_SVC --> PG
     ALEMBIC --> PG
 
     LLM_FAC --> GEMINI
@@ -90,8 +96,8 @@ graph TB
     LLM_FAC --> CLAUDE
 
     class PAGES,QUERY,CLIENT frontend
-    class AUTH_EP,ACCT_EP,TX_EP,CAT_EP,BUD_EP,REP_EP,TAX_EP,USR_EP backend
-    class AUTH_SVC,ACCT_SVC,TX_SVC,CAT_SVC,BUD_SVC,REP_SVC,TAX_SVC,LLM_FAC service
+    class AUTH_EP,ACCT_EP,TX_EP,CAT_EP,BUD_EP,REP_EP,TAX_EP,SPEND_EP,USR_EP backend
+    class AUTH_SVC,ACCT_SVC,TX_SVC,CAT_SVC,BUD_SVC,REP_SVC,TAX_SVC,SPEND_SVC,LLM_FAC service
     class PG,ALEMBIC db
     class GEMINI,OPENAI_P,CLAUDE llm
 ```
@@ -269,7 +275,7 @@ erDiagram
 
 ---
 
-## 4. AI Tax Advisory Flow
+## 4. AI Advisory Flow (Tax & Spend)
 
 ```mermaid
 flowchart TD
@@ -296,7 +302,7 @@ flowchart TD
     L2 --> M
     L3 --> M
 
-    M --> N[Strip markdown fences<br/>Extract outermost JSON object]
+    M --> N[Strip markdown fences + BOM<br/>Try direct parse → extract outermost JSON]
     N --> O{JSON valid?}
     O -->|yes| P[Structured TaxResult]
     O -->|no| Q[Fallback: wrap in summary field]
