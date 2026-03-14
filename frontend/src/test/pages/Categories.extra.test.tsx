@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Categories from '../../pages/Categories'
 import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
+import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
 import { mockCategory } from '../mocks/handlers'
 
@@ -32,12 +33,11 @@ function renderCategories() {
 describe('Categories page - additional coverage', () => {
   beforeEach(() => {
     server.listen({ onUnhandledRequest: 'bypass' })
-    localStorage.setItem('access_token', 'valid-token')
   })
   afterEach(() => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    setAccessToken(null)
   })
 
   it('submits create category form', async () => {

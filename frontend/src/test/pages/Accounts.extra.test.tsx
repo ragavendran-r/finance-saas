@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Accounts from '../../pages/Accounts'
 import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
+import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
 import { mockAccount } from '../mocks/handlers'
 
@@ -32,12 +33,11 @@ function renderAccounts() {
 describe('Accounts page - additional coverage', () => {
   beforeEach(() => {
     server.listen({ onUnhandledRequest: 'bypass' })
-    localStorage.setItem('access_token', 'valid-token')
   })
   afterEach(() => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    setAccessToken(null)
   })
 
   it('opens edit modal when pencil button is clicked', async () => {

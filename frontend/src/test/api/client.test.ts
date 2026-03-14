@@ -6,20 +6,22 @@ const BASE = 'http://localhost:8000/api/v1'
 
 describe('apiClient', () => {
   beforeEach(() => server.listen({ onUnhandledRequest: 'bypass' }))
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    // Reset in-memory token between tests
+    const { setAccessToken } = await import('../../api/client')
+    setAccessToken(null)
   })
 
   it('has the correct base URL', async () => {
-    // Import after server is set up
     const { default: apiClient } = await import('../../api/client')
     expect(apiClient.defaults.baseURL).toBe('http://localhost:8000/api/v1')
   })
 
-  it('attaches Authorization header when token exists in localStorage', async () => {
-    localStorage.setItem('access_token', 'my-test-token')
+  it('attaches Authorization header when token exists in memory', async () => {
+    const { default: apiClient, setAccessToken } = await import('../../api/client')
+    setAccessToken('my-test-token')
     let capturedAuthHeader: string | undefined
 
     server.use(
@@ -29,13 +31,11 @@ describe('apiClient', () => {
       })
     )
 
-    const { default: apiClient } = await import('../../api/client')
     await apiClient.get('/auth/me')
     expect(capturedAuthHeader).toBe('Bearer my-test-token')
   })
 
   it('does not attach Authorization header when no token', async () => {
-    localStorage.removeItem('access_token')
     let capturedAuthHeader: string | null = null
 
     server.use(
@@ -51,8 +51,6 @@ describe('apiClient', () => {
   })
 
   it('rejects the promise on 401 response', async () => {
-    localStorage.setItem('access_token', 'expired-token')
-
     server.use(
       http.get(`${BASE}/auth/me`, () =>
         HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })

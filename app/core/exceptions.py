@@ -23,7 +23,7 @@ class TenantNotFoundException(Exception):
 def add_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(NotAuthorizedException)
     async def not_authorized_handler(request: Request, exc: NotAuthorizedException):
-        return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     @app.exception_handler(ResourceNotFoundException)
     async def not_found_handler(request: Request, exc: ResourceNotFoundException):

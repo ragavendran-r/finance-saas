@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProtectedRoute } from '../../components/ProtectedRoute'
 import { AuthProvider } from '../../hooks/useAuth'
+import { setAccessToken } from '../../api/client'
 import { server } from '../mocks/server'
 import { http, HttpResponse } from 'msw'
 
@@ -44,12 +45,10 @@ describe('ProtectedRoute', () => {
   afterEach(() => {
     server.resetHandlers()
     server.close()
-    localStorage.clear()
+    setAccessToken(null)
   })
 
-  it('shows loading spinner initially when token exists', async () => {
-    localStorage.setItem('access_token', 'test-token')
-    // Use a slow response so we can catch loading state
+  it('shows loading spinner initially while refresh is in flight', async () => {
     server.use(
       http.get(`${BASE}/auth/me`, async () => {
         await new Promise((r) => setTimeout(r, 50))
@@ -65,12 +64,15 @@ describe('ProtectedRoute', () => {
       })
     )
     renderProtectedRoute('/dashboard')
-    // Loading spinner should show during the auth check
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
-  it('redirects to /login when no token in localStorage', async () => {
-    localStorage.removeItem('access_token')
+  it('redirects to /login when refresh cookie is absent/invalid', async () => {
+    server.use(
+      http.post(`${BASE}/auth/refresh`, () =>
+        HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+      )
+    )
     renderProtectedRoute('/dashboard')
 
     await waitFor(() => {
@@ -78,8 +80,7 @@ describe('ProtectedRoute', () => {
     })
   })
 
-  it('renders children when authenticated', async () => {
-    localStorage.setItem('access_token', 'valid-token')
+  it('renders children when refresh succeeds and user is authenticated', async () => {
     renderProtectedRoute('/dashboard')
 
     await waitFor(() => {
@@ -88,7 +89,6 @@ describe('ProtectedRoute', () => {
   })
 
   it('redirects to /login when auth/me returns 401', async () => {
-    localStorage.setItem('access_token', 'bad-token')
     server.use(
       http.get(`${BASE}/auth/me`, () =>
         HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })
