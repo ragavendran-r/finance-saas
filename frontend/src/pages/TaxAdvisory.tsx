@@ -332,7 +332,7 @@ export default function TaxAdvisory() {
                 Recommendations ({result.recommendations.length})
               </h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {result.recommendations.map((rec, i) => (
+                {result.recommendations.map((rec: TaxRecommendation, i: number) => (
                   <RecommendationCard key={i} rec={rec} />
                 ))}
               </div>

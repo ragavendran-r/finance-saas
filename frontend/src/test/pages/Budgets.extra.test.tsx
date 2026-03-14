@@ -2,7 +2,6 @@
  * Additional Budgets page tests to improve coverage
  * of lines 127-137, 170-201 (edit modal, delete flow)
  */
-import React from 'react'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

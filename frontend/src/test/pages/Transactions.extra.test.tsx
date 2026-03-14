@@ -2,7 +2,6 @@
  * Additional Transactions page tests to improve coverage
  * of lines 346-356, 379-388 (edit modal, delete flow)
  */
-import React from 'react'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
