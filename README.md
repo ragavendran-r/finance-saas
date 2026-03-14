@@ -2,7 +2,9 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Multi-tenant personal finance management platform built with FastAPI, SQLAlchemy, PostgreSQL, and React.
+Multi-tenant personal finance management platform
+
+> **Architecture diagrams** — system overview, auth flow, ERD, AI advisory flow, and multi-tenancy model: [docs/architecture.md](docs/architecture.md) built with FastAPI, SQLAlchemy, PostgreSQL, and React.
 
 ## Tech Stack
 
