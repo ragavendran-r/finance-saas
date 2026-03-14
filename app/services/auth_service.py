@@ -46,3 +46,15 @@ class AuthService:
             "access_token": create_access_token(user.id, user.tenant_id, user.role.value),
             "refresh_token": create_refresh_token(user.id),
         }
+
+    async def refresh(self, refresh_token: str) -> str:
+        from app.core.security import decode_token
+        payload = decode_token(refresh_token)
+        if not payload or "sub" not in payload:
+            raise NotAuthorizedException()
+        user_id = uuid.UUID(payload["sub"])
+        result = await self.db.execute(select(User).where(User.id == user_id, User.is_active == True))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise NotAuthorizedException()
+        return create_access_token(user.id, user.tenant_id, user.role.value)
