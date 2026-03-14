@@ -15,7 +15,7 @@ class AccountService:
     async def list_accounts(self, tenant_id: uuid.UUID, user_id: uuid.UUID) -> list[Account]:
         result = await self.db.execute(
             select(Account)
-            .where(Account.tenant_id == tenant_id, Account.user_id == user_id, Account.is_active == True)
+            .where(Account.tenant_id == tenant_id, Account.user_id == user_id, Account.is_active)
             .order_by(Account.created_at.desc())
         )
         return list(result.scalars().all())

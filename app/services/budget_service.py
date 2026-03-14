@@ -43,7 +43,7 @@ class BudgetService:
         result = await self.db.execute(
             select(Budget).where(Budget.tenant_id == tenant_id, Budget.user_id == user_id)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def create_budget(self, tenant_id: uuid.UUID, user_id: uuid.UUID, body: BudgetCreate) -> Budget:
         budget = Budget(id=uuid.uuid4(), tenant_id=tenant_id, user_id=user_id, **body.model_dump())

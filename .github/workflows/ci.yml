@@ -7,6 +7,38 @@ on:
     branches: [main]
 
 jobs:
+  # ─── Backend lint ────────────────────────────────────────────────────────────
+  backend-lint:
+    name: Backend Lint & Type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Python deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: ruff check
+        run: ruff check app/ tests/
+
+      - name: mypy
+        env:
+          SECRET_KEY: lint-key
+        run: mypy app/ --ignore-missing-imports --no-error-summary
+
+  # ─── Backend tests ───────────────────────────────────────────────────────────
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -33,22 +65,113 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
+
+      - name: Cache Python deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: pip-${{ runner.os }}-
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/finance_saas_test
+          SECRET_KEY: test-secret-key
+        run: alembic upgrade head
+
       - name: Run tests with coverage
         env:
-          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/finance_saas
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/finance_saas_test
           SECRET_KEY: test-secret-key
         run: |
           python -m pytest tests/ \
             --cov=app \
             --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
             --cov-fail-under=80 \
+            --junitxml=test-results.xml \
             -q
 
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: test-results.xml
+
+      - name: Annotate test results on PR
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Backend Tests
+          path: test-results.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: coverage.xml
+
+  # ─── Backend security audit ──────────────────────────────────────────────────
+  backend-audit:
+    name: Backend Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Python deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Install dependencies + pip-audit
+        run: pip install -e ".[dev]" pip-audit
+
+      - name: Run pip-audit
+        run: pip-audit --skip-editable
+
+  # ─── Frontend lint + build ───────────────────────────────────────────────────
+  frontend-lint-build:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: TypeScript build
+        working-directory: frontend
+        run: npm run build
+
+  # ─── Frontend tests ──────────────────────────────────────────────────────────
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
@@ -69,4 +192,43 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: frontend
-        run: npx vitest run --coverage --coverage.thresholds.statements=80 --coverage.thresholds.lines=80
+        run: npx vitest run --coverage --reporter=verbose --reporter=junit --outputFile=test-results.xml --coverage.thresholds.statements=80 --coverage.thresholds.lines=80
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-test-results
+          path: frontend/test-results.xml
+
+      - name: Annotate test results on PR
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Frontend Tests
+          path: frontend/test-results.xml
+          reporter: java-junit
+          fail-on-error: false
+
+  # ─── Frontend security audit ─────────────────────────────────────────────────
+  frontend-audit:
+    name: Frontend Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: npm audit
+        working-directory: frontend
+        run: npm audit --audit-level=moderate
