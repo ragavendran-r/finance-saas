@@ -1,4 +1,5 @@
 """Spend advisory service — uses an LLM to generate personalised spending recommendations."""
+import asyncio
 import json
 import re
 import uuid
@@ -83,23 +84,15 @@ class SpendAdvisoryService:
         date_from: date,
         date_to: date,
     ) -> dict:
-        # --- Gather income ---
-        income_result = await self.db.execute(
-            select(func.sum(Transaction.amount)).where(
-                Transaction.tenant_id == tenant_id,
-                Transaction.type == TransactionType.CREDIT,
-                Transaction.date >= date_from,
-                Transaction.date <= date_to,
-            )
+        # --- Gather income, expenses, and budgets in parallel ---
+        income_q = select(func.sum(Transaction.amount)).where(
+            Transaction.tenant_id == tenant_id,
+            Transaction.type == TransactionType.CREDIT,
+            Transaction.date >= date_from,
+            Transaction.date <= date_to,
         )
-        total_income = income_result.scalar() or Decimal("0")
-
-        # --- Gather expenses by category ---
-        expense_rows = await self.db.execute(
-            select(
-                Category.name,
-                func.sum(Transaction.amount).label("total"),
-            )
+        expense_q = (
+            select(Category.name, func.sum(Transaction.amount).label("total"))
             .outerjoin(Category, Transaction.category_id == Category.id)
             .where(
                 Transaction.tenant_id == tenant_id,
@@ -110,21 +103,27 @@ class SpendAdvisoryService:
             .group_by(Category.name)
             .order_by(func.sum(Transaction.amount).desc())
         )
-        category_expenses = [
-            {"category": row.name or "Uncategorized", "spent": float(row.total)}
-            for row in expense_rows
-        ]
-        total_expenses = sum(r["spent"] for r in category_expenses)
-
-        # --- Gather budgets ---
-        budget_rows = await self.db.execute(
+        budget_q = (
             select(Budget, Category.name.label("cat_name"))
             .outerjoin(Category, Budget.category_id == Category.id)
             .where(Budget.tenant_id == tenant_id)
         )
+
+        income_result, expense_result, budget_result = await asyncio.gather(
+            self.db.execute(income_q),
+            self.db.execute(expense_q),
+            self.db.execute(budget_q),
+        )
+
+        total_income = income_result.scalar() or Decimal("0")
+        category_expenses = [
+            {"category": row.name or "Uncategorized", "spent": float(row.total)}
+            for row in expense_result
+        ]
+        total_expenses = sum(r["spent"] for r in category_expenses)
         budgets = [
             {"category": row.cat_name or "Unknown", "amount": float(row.Budget.amount), "period": row.Budget.period.value}
-            for row in budget_rows
+            for row in budget_result
         ]
         budget_by_cat = {b["category"]: b["amount"] for b in budgets}
 

@@ -17,7 +17,9 @@ import TaxAdvisory from './pages/TaxAdvisory';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30,
+      staleTime: 2 * 60 * 1000,   // 2 minutes — financial data doesn't need sub-minute freshness
+      gcTime: 10 * 60 * 1000,     // keep cache for 10 minutes after becoming unused
+      refetchOnWindowFocus: false, // avoid refetching every time the user switches tabs
       retry: 1,
     },
   },

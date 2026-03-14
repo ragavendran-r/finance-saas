@@ -45,7 +45,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ENVIRONMENT=development
 
-# LLM provider for AI Tax Advisory (choose one: gemini | openai | anthropic)
+# LLM provider for AI Tax & Spend Advisory (choose one: gemini | openai | anthropic)
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=<your_gemini_api_key>
 OPENAI_API_KEY=

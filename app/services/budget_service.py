@@ -49,7 +49,6 @@ class BudgetService:
         budget = Budget(id=uuid.uuid4(), tenant_id=tenant_id, user_id=user_id, **body.model_dump())
         self.db.add(budget)
         await self.db.commit()
-        await self.db.refresh(budget)
         return budget
 
     async def get_budget(self, tenant_id: uuid.UUID, budget_id: uuid.UUID) -> Budget:
@@ -66,7 +65,6 @@ class BudgetService:
         for field, value in body.model_dump(exclude_none=True).items():
             setattr(budget, field, value)
         await self.db.commit()
-        await self.db.refresh(budget)
         return budget
 
     async def delete_budget(self, tenant_id: uuid.UUID, budget_id: uuid.UUID) -> None:

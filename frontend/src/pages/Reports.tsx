@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { reportsApi } from '../api/reports';
 import { accountsApi } from '../api/accounts';
-import { categoriesApi } from '../api/categories';
+import { useCategories } from '../hooks/useCategories';
 import { spendAdvisoryApi } from '../api/spendAdvisory';
 import type { SpendAdvisoryResult, SpendRecommendation, BudgetAdvice } from '../api/spendAdvisory';
 import { Card } from '../components/Card';
@@ -44,7 +44,7 @@ export default function Reports() {
   const [dateTo, setDateTo] = useState(format(endOfMonth(now), 'yyyy-MM-dd'));
 
   const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
-  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
+  const { data: categories } = useCategories();
   const currency = accounts?.[0]?.currency || 'USD';
 
   const { data: spending, isLoading: spendLoading } = useQuery({

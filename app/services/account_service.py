@@ -24,7 +24,7 @@ class AccountService:
         account = Account(id=uuid.uuid4(), tenant_id=tenant_id, user_id=user_id, **body.model_dump())
         self.db.add(account)
         await self.db.commit()
-        await self.db.refresh(account)
+        await self.db.refresh(account)  # needed to get DB-formatted Numeric balance
         return account
 
     async def get_account(self, tenant_id: uuid.UUID, account_id: uuid.UUID) -> Account:
@@ -41,7 +41,6 @@ class AccountService:
         for field, value in body.model_dump(exclude_none=True).items():
             setattr(account, field, value)
         await self.db.commit()
-        await self.db.refresh(account)
         return account
 
     async def delete_account(self, tenant_id: uuid.UUID, account_id: uuid.UUID) -> None:
