@@ -13,7 +13,7 @@ import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
 import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
-import { mockBudget, mockBudgetProgress, mockCategory } from '../mocks/handlers'
+import { mockBudget, mockCategory } from '../mocks/handlers'
 
 const BASE = 'http://localhost:8000/api/v1'
 

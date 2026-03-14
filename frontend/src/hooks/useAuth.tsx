@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- hook and provider are intentionally co-located */
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { authApi } from '../api/auth';
 import { setAccessToken } from '../api/client';
