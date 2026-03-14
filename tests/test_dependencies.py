@@ -1,5 +1,5 @@
 """Pure unit tests for app/core/dependencies.py"""
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.dependencies import get_current_user, get_current_user_payload, require_role
-from app.core.security import create_access_token, create_refresh_token
+from app.core.security import create_access_token
 
 
 class TestGetCurrentUserPayload:
@@ -30,7 +30,7 @@ class TestGetCurrentUserPayload:
 
     @pytest.mark.asyncio
     async def test_token_without_sub_raises_401(self):
-        from jose import jwt
+        import jwt
         from app.config import get_settings
         settings = get_settings()
         # Token without "sub" claim
@@ -108,7 +108,7 @@ class TestRequireRole:
         token = create_access_token(user_id, tenant_id, "admin")
 
         from fastapi.security import HTTPAuthorizationCredentials
-        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        _credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
         checker = require_role("admin", "superadmin")
         # checker is a coroutine that takes payload as a dependency

@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -9,7 +8,6 @@ import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
 import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
-import { mockTransaction } from '../mocks/handlers'
 
 const BASE = 'http://localhost:8000/api/v1'
 

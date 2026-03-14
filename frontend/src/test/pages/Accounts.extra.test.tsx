@@ -2,7 +2,6 @@
  * Additional Accounts page tests covering edit/delete flows
  * to increase coverage of lines 202-204, 236-274
  */
-import React from 'react'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

@@ -2,7 +2,6 @@
  * Additional Transactions page tests to improve coverage
  * of lines 346-356, 379-388 (edit modal, delete flow)
  */
-import React from 'react'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -13,7 +12,7 @@ import { AuthProvider } from '../../hooks/useAuth'
 import { server } from '../mocks/server'
 import { setAccessToken } from '../../api/client'
 import { http, HttpResponse } from 'msw'
-import { mockTransaction, mockAccount, mockCategory } from '../mocks/handlers'
+import { mockTransaction, mockAccount } from '../mocks/handlers'
 
 const BASE = 'http://localhost:8000/api/v1'
 
@@ -118,7 +117,7 @@ describe('Transactions page - additional coverage', () => {
   })
 
   it('filter by account dropdown reflects account options after loading', async () => {
-    const user = userEvent.setup()
+    userEvent.setup()
     renderTransactions()
     // Wait for accounts to load and appear in filter
     await waitFor(() => {

@@ -15,10 +15,10 @@ class CategoryService:
     async def list_categories(self, tenant_id: uuid.UUID) -> list[Category]:
         result = await self.db.execute(
             select(Category).where(
-                or_(Category.tenant_id == tenant_id, Category.is_system == True)
+                or_(Category.tenant_id == tenant_id, Category.is_system)
             )
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def create_category(self, tenant_id: uuid.UUID, body: CategoryCreate) -> Category:
         cat = Category(id=uuid.uuid4(), tenant_id=tenant_id, **body.model_dump())

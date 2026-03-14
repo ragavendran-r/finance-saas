@@ -39,7 +39,7 @@ class AuthService:
         return user
 
     async def login(self, body: LoginRequest) -> dict:
-        result = await self.db.execute(select(User).where(User.email == body.email, User.is_active == True))
+        result = await self.db.execute(select(User).where(User.email == body.email, User.is_active))
         user = result.scalar_one_or_none()
         if not user or not verify_password(body.password, user.hashed_password):
             raise NotAuthorizedException()
@@ -63,7 +63,7 @@ class AuthService:
         if existing.scalar_one_or_none():
             raise NotAuthorizedException()
 
-        result = await self.db.execute(select(User).where(User.id == user_id, User.is_active == True))
+        result = await self.db.execute(select(User).where(User.id == user_id, User.is_active))
         user = result.scalar_one_or_none()
         if not user:
             raise NotAuthorizedException()

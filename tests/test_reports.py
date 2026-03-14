@@ -1,5 +1,4 @@
 """Integration tests for reports endpoints."""
-from uuid import uuid4
 
 import pytest
 
@@ -208,7 +207,7 @@ async def test_net_worth_with_accounts(client):
 async def test_net_worth_excludes_inactive_accounts(client):
     token, _ = await register_and_login(client)
 
-    acct_resp = await client.post(
+    _acct_resp = await client.post(
         "/api/v1/accounts",
         json={"name": "Active", "type": "checking", "balance": "1000.00"},
         headers=auth_headers(token),

@@ -1,7 +1,6 @@
 import uuid
-from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -33,7 +32,7 @@ class TransactionService:
             stmt = stmt.where(Transaction.description.ilike(f"%{filters.search}%"))
         stmt = stmt.order_by(Transaction.date.desc()).limit(filters.limit).offset(filters.offset)
         result = await self.db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def create_transaction(self, tenant_id: uuid.UUID, body: TransactionCreate) -> Transaction:
         # Lock account row and update balance atomically

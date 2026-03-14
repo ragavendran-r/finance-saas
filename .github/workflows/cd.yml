@@ -1,0 +1,65 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+# Only one deployment runs at a time; new pushes cancel in-progress runs
+concurrency:
+  group: cd-main
+  cancel-in-progress: true
+
+jobs:
+  docker-build-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    # Only run after CI passes (reuse all CI jobs as dependencies via needs would require
+    # a caller workflow; here we guard with the event filter above)
+    permissions:
+      contents: read
+      packages: write   # needed to push to GHCR
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Staging deploy (placeholder) ─────────────────────────────────────────────
+  # Uncomment and configure once a staging environment is available.
+  # deploy-staging:
+  #   name: Deploy to Staging
+  #   needs: docker-build-push
+  #   runs-on: ubuntu-latest
+  #   environment: staging          # requires GitHub Environment + secrets configured
+  #   steps:
+  #     - name: Deploy
+  #       run: |
+  #         # e.g. SSH + docker pull, kubectl rollout, Render deploy hook, etc.
+  #         echo "Deploy ${{ steps.meta.outputs.tags }} to staging"

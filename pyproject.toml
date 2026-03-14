@@ -13,7 +13,7 @@ dependencies = [
     "pydantic-settings>=2.3.0",
     "passlib[bcrypt]>=1.7.4",
     "bcrypt==4.0.1",
-    "python-jose[cryptography]>=3.3.0",
+    "PyJWT>=2.8.0",
     "python-multipart>=0.0.9",
     "slowapi>=0.1.9",
     # LLM providers (all installed; only the configured one is imported at runtime)
@@ -42,6 +42,11 @@ packages = ["app"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+no_error_summary = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

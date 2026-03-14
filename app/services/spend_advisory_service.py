@@ -3,7 +3,7 @@ import asyncio
 import json
 import re
 import uuid
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -120,7 +120,7 @@ class SpendAdvisoryService:
             {"category": row.name or "Uncategorized", "spent": float(row.total)}
             for row in expense_result
         ]
-        total_expenses = sum(r["spent"] for r in category_expenses)
+        total_expenses: float = sum(r["spent"] for r in category_expenses)  # type: ignore[misc]
         budgets = [
             {"category": row.cat_name or "Unknown", "amount": float(row.Budget.amount), "period": row.Budget.period.value}
             for row in budget_result
@@ -136,12 +136,12 @@ class SpendAdvisoryService:
 
         # --- Compose per-category budget vs actual table ---
         all_cats = {r["category"] for r in category_expenses} | set(budget_by_cat.keys())
-        expense_by_cat = {r["category"]: r["spent"] / months for r in category_expenses}
+        expense_by_cat: dict[str, float] = {r["category"]: r["spent"] / months for r in category_expenses}  # type: ignore[misc,operator]
 
         bva_lines = []
         for cat in sorted(all_cats):
-            avg_spend = expense_by_cat.get(cat, 0.0)
-            budget_amt = budget_by_cat.get(cat)
+            avg_spend = expense_by_cat.get(cat, 0.0)  # type: ignore[arg-type]
+            budget_amt = budget_by_cat.get(cat)  # type: ignore[arg-type]
             if budget_amt is not None:
                 diff = avg_spend - budget_amt
                 status = f"OVER by ₹{diff:,.0f}" if diff > 0 else f"under by ₹{abs(diff):,.0f}"

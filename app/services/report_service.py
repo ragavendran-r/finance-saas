@@ -10,6 +10,7 @@ from app.models.account import Account
 from app.models.budget import Budget, BudgetPeriod
 from app.models.category import Category
 from app.models.transaction import Transaction, TransactionType
+from app.schemas.budget import BudgetProgress
 
 
 def _period_window(budget: Budget, today: date) -> tuple[date, date]:
@@ -76,14 +77,14 @@ class ReportService:
     async def net_worth(self, tenant_id: uuid.UUID) -> dict:
         result = await self.db.execute(
             select(Account.type, func.sum(Account.balance).label("total"))
-            .where(Account.tenant_id == tenant_id, Account.is_active == True)
+            .where(Account.tenant_id == tenant_id, Account.is_active)
             .group_by(Account.type)
         )
         by_type = {row.type.value: row.total for row in result}
         total = sum(by_type.values(), Decimal("0"))
         return {"by_account_type": by_type, "total": total}
 
-    async def budget_vs_actual(self, tenant_id: uuid.UUID, date_from: date, date_to: date) -> list[dict]:
+    async def budget_vs_actual(self, tenant_id: uuid.UUID, date_from: date, date_to: date) -> list[BudgetProgress]:
         from app.schemas.budget import BudgetProgress, BudgetResponse
 
         # Fetch all budgets in one query
