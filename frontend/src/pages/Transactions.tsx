@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { transactionsApi } from '../api/transactions';
 import { accountsApi } from '../api/accounts';
-import { categoriesApi } from '../api/categories';
+import { useCategories } from '../hooks/useCategories';
 import type { Transaction } from '../types';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
@@ -66,7 +66,7 @@ export default function Transactions() {
   });
 
   const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
-  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
+  const { data: categories } = useCategories();
 
   const createForm = useForm<TxValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

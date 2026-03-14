@@ -3,11 +3,14 @@ from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ResourceNotFoundException
 from app.models.account import Account
 from app.models.transaction import Transaction, TransactionType
 from app.schemas.transaction import TransactionCreate, TransactionFilters, TransactionUpdate
+
+_EAGER = [selectinload(Transaction.account), selectinload(Transaction.category)]
 
 
 class TransactionService:
@@ -15,7 +18,7 @@ class TransactionService:
         self.db = db
 
     async def list_transactions(self, tenant_id: uuid.UUID, filters: TransactionFilters) -> list[Transaction]:
-        stmt = select(Transaction).where(Transaction.tenant_id == tenant_id)
+        stmt = select(Transaction).options(*_EAGER).where(Transaction.tenant_id == tenant_id)
         if filters.account_id:
             stmt = stmt.where(Transaction.account_id == filters.account_id)
         if filters.category_id:
@@ -57,7 +60,9 @@ class TransactionService:
 
     async def get_transaction(self, tenant_id: uuid.UUID, transaction_id: uuid.UUID) -> Transaction:
         result = await self.db.execute(
-            select(Transaction).where(Transaction.tenant_id == tenant_id, Transaction.id == transaction_id)
+            select(Transaction).options(*_EAGER).where(
+                Transaction.tenant_id == tenant_id, Transaction.id == transaction_id
+            )
         )
         txn = result.scalar_one_or_none()
         if not txn:

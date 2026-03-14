@@ -117,6 +117,7 @@ class TaxAdvisoryService:
 
     async def income_projection(self, tenant_id: uuid.UUID) -> dict:
         """Return avg monthly credit and annual projection based on months that have credits."""
+        import asyncio as _asyncio
         from datetime import date
         from sqlalchemy import func as sqlfunc
         today = date.today()
@@ -127,17 +128,16 @@ class TaxAdvisoryService:
             Transaction.date >= fy_start,
             Transaction.date <= today,
         ]
-        # Total YTD credits
-        total_result = await self.db.execute(
-            select(func.sum(Transaction.amount)).where(*base_filter)
+        # Run total-credits and distinct-months queries in parallel
+        total_result, months_result = await _asyncio.gather(
+            self.db.execute(select(func.sum(Transaction.amount)).where(*base_filter)),
+            self.db.execute(
+                select(sqlfunc.count(sqlfunc.distinct(
+                    sqlfunc.date_trunc("month", Transaction.date)
+                ))).where(*base_filter)
+            ),
         )
         ytd = total_result.scalar() or Decimal("0")
-        # Count distinct months that have at least one credit
-        months_result = await self.db.execute(
-            select(sqlfunc.count(sqlfunc.distinct(
-                sqlfunc.date_trunc("month", Transaction.date)
-            ))).where(*base_filter)
-        )
         months_with_credits = max(1, months_result.scalar() or 0)
         avg_monthly = (ytd / months_with_credits).quantize(Decimal("1"))
         annual = avg_monthly * 12

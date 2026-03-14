@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Pencil, Trash2, Target } from 'lucide-react';
 import { budgetsApi } from '../api/budgets';
-import { categoriesApi } from '../api/categories';
 import { accountsApi } from '../api/accounts';
+import { useCategories } from '../hooks/useCategories';
 import type { Budget } from '../types';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
@@ -51,10 +51,7 @@ export default function Budgets() {
   const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
   const currency = accounts?.[0]?.currency || 'USD';
 
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoriesApi.list,
-  });
+  const { data: categories } = useCategories();
 
   const createForm = useForm<CreateValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

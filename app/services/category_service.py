@@ -24,7 +24,6 @@ class CategoryService:
         cat = Category(id=uuid.uuid4(), tenant_id=tenant_id, **body.model_dump())
         self.db.add(cat)
         await self.db.commit()
-        await self.db.refresh(cat)
         return cat
 
     async def update_category(self, tenant_id: uuid.UUID, category_id: uuid.UUID, body: CategoryUpdate) -> Category:
@@ -39,7 +38,6 @@ class CategoryService:
         for field, value in body.model_dump(exclude_none=True).items():
             setattr(cat, field, value)
         await self.db.commit()
-        await self.db.refresh(cat)
         return cat
 
     async def delete_category(self, tenant_id: uuid.UUID, category_id: uuid.UUID) -> None:

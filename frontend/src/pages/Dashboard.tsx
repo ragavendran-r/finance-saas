@@ -12,8 +12,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { reportsApi } from '../api/reports';
 import { transactionsApi } from '../api/transactions';
 import { budgetsApi } from '../api/budgets';
-import { categoriesApi } from '../api/categories';
 import { accountsApi } from '../api/accounts';
+import { useCategories } from '../hooks/useCategories';
 import { Card } from '../components/Card';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Badge } from '../components/Badge';
@@ -49,7 +49,7 @@ export default function Dashboard() {
     queryFn: budgetsApi.list,
   });
 
-  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
+  const { data: categories } = useCategories();
   const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
   const currency = accounts?.[0]?.currency || 'USD';
 
