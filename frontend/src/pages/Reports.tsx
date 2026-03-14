@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { Sparkles, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank } from 'lucide-react';
 import {
   PieChart,
   Pie,
@@ -17,6 +18,8 @@ import {
 import { reportsApi } from '../api/reports';
 import { accountsApi } from '../api/accounts';
 import { categoriesApi } from '../api/categories';
+import { spendAdvisoryApi } from '../api/spendAdvisory';
+import type { SpendAdvisoryResult, SpendRecommendation, BudgetAdvice } from '../api/spendAdvisory';
 import { Card } from '../components/Card';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { formatCurrency } from '../utils/format';
@@ -62,6 +65,10 @@ export default function Reports() {
   const { data: budgetVsActual, isLoading: bvaLoading } = useQuery({
     queryKey: ['reports', 'budget-vs-actual', dateFrom, dateTo],
     queryFn: () => reportsApi.budgetVsActual(dateFrom, dateTo),
+  });
+
+  const spendAdvisoryMutation = useMutation({
+    mutationFn: () => spendAdvisoryApi.getRecommendations(dateFrom, dateTo),
   });
 
   const setPreset = (months: number) => {
@@ -311,6 +318,218 @@ export default function Reports() {
           </div>
         )}
       </Card>
+
+      {/* AI Spend Recommendations */}
+      <Card title="AI Spend Recommendations">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Get personalised monthly and annual spending recommendations based on your income, expenses, and budgets for the selected period.
+            </p>
+            <button
+              onClick={() => spendAdvisoryMutation.mutate()}
+              disabled={spendAdvisoryMutation.isPending}
+              className="ml-4 flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              {spendAdvisoryMutation.isPending ? 'Analysing…' : 'Get Recommendations'}
+            </button>
+          </div>
+
+          {spendAdvisoryMutation.isError && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">Failed to get recommendations. Please try again.</p>
+          )}
+
+          {spendAdvisoryMutation.data && (
+            <SpendAdvisoryPanel result={spendAdvisoryMutation.data.result} currency={currency} provider={spendAdvisoryMutation.data.llm_provider} />
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+const VERDICT_BADGE: Record<BudgetAdvice['verdict'], string> = {
+  increase:   'bg-red-100 text-red-700',
+  decrease:   'bg-blue-100 text-blue-700',
+  on_track:   'bg-green-100 text-green-700',
+  set_budget: 'bg-yellow-100 text-yellow-700',
+};
+
+const VERDICT_LABEL: Record<BudgetAdvice['verdict'], string> = {
+  increase:   '↑ Increase',
+  decrease:   '↓ Decrease',
+  on_track:   '✓ On track',
+  set_budget: '+ Set budget',
+};
+
+const TYPE_CONFIG: Record<SpendRecommendation['type'], { icon: React.ReactNode; color: string; bg: string }> = {
+  reduce:     { icon: <TrendingDown className="w-4 h-4" />,    color: 'text-red-600',    bg: 'bg-red-50' },
+  reallocate: { icon: <ArrowRightLeft className="w-4 h-4" />,  color: 'text-blue-600',   bg: 'bg-blue-50' },
+  save:       { icon: <PiggyBank className="w-4 h-4" />,       color: 'text-green-600',  bg: 'bg-green-50' },
+  invest:     { icon: <TrendingUp className="w-4 h-4" />,      color: 'text-purple-600', bg: 'bg-purple-50' },
+};
+
+const PRIORITY_BADGE: Record<SpendRecommendation['priority'], string> = {
+  high:   'bg-red-100 text-red-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  low:    'bg-gray-100 text-gray-600',
+};
+
+function SpendAdvisoryPanel({ result, currency, provider }: { result: SpendAdvisoryResult; currency: string; provider: string }) {
+  const ms = result.monthly_summary;
+  const ap = result.annual_projection;
+
+  return (
+    <div className="space-y-6">
+      {/* Monthly / Annual summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Avg Monthly Income',   value: ms.avg_income,    color: 'text-green-600' },
+          { label: 'Avg Monthly Expenses', value: ms.avg_expenses,  color: 'text-red-500' },
+          { label: 'Avg Monthly Savings',  value: ms.avg_savings,   color: ms.avg_savings >= 0 ? 'text-indigo-600' : 'text-red-500' },
+          { label: 'Savings Rate',         value: null,             color: ms.savings_rate_pct >= 0 ? 'text-indigo-600' : 'text-red-500', pct: ms.savings_rate_pct },
+        ].map((card) => (
+          <div key={card.label} className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500 mb-1">{card.label}</p>
+            <p className={`text-base font-bold ${card.color}`}>
+              {card.pct !== undefined ? `${card.pct.toFixed(1)}%` : formatCurrency(card.value!, currency)}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Annual projection */}
+      <div className="bg-indigo-50 rounded-xl p-4">
+        <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-2">Annual Projection</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-xs text-gray-500">Projected Income</p>
+            <p className="text-sm font-bold text-green-600">{formatCurrency(ap.projected_income, currency)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Projected Expenses</p>
+            <p className="text-sm font-bold text-red-500">{formatCurrency(ap.projected_expenses, currency)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Projected Savings</p>
+            <p className={`text-sm font-bold ${ap.projected_savings >= 0 ? 'text-indigo-700' : 'text-red-500'}`}>
+              {formatCurrency(ap.projected_savings, currency)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Over-budget categories */}
+      {result.over_budget_categories?.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2">Over Budget</p>
+          <div className="space-y-2">
+            {result.over_budget_categories.map((ob, i) => (
+              <div key={i} className="flex items-center justify-between bg-red-50 rounded-xl px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">{ob.category}</span>
+                <span className="text-sm text-red-600 font-semibold">
+                  {formatCurrency(ob.spent, currency)} / {formatCurrency(ob.budgeted, currency)}
+                  <span className="ml-2 text-xs">(+{formatCurrency(ob.overspend, currency)} over)</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Budget Advice */}
+      {result.budget_advice?.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2">Budget Allocation Advice</p>
+          <div className="overflow-x-auto rounded-xl border border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-2.5">Category</th>
+                  <th className="text-right px-4 py-2.5">Current Budget</th>
+                  <th className="text-right px-4 py-2.5">Avg Spend</th>
+                  <th className="text-right px-4 py-2.5">Suggested</th>
+                  <th className="text-center px-4 py-2.5">Verdict</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {result.budget_advice.map((row: BudgetAdvice, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-2.5 font-medium text-gray-700">{row.category}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-500">
+                      {row.current_budget != null ? formatCurrency(row.current_budget, currency) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-gray-700">{formatCurrency(row.avg_monthly_spend, currency)}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-indigo-700">{formatCurrency(row.suggested_budget, currency)}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${VERDICT_BADGE[row.verdict]}`}>
+                        {VERDICT_LABEL[row.verdict]}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Reasons */}
+          <div className="mt-3 space-y-1.5">
+            {result.budget_advice.filter((r: BudgetAdvice) => r.verdict !== 'on_track').map((row: BudgetAdvice, i: number) => (
+              <p key={i} className="text-xs text-gray-500">
+                <span className="font-medium text-gray-700">{row.category}:</span> {row.reason}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {result.recommendations?.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2">Recommendations</p>
+          <div className="space-y-3">
+            {result.recommendations.map((rec, i) => {
+              const cfg = TYPE_CONFIG[rec.type] ?? TYPE_CONFIG.save;
+              return (
+                <div key={i} className="border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`p-1.5 rounded-lg ${cfg.bg} ${cfg.color}`}>{cfg.icon}</span>
+                      <span className="text-sm font-semibold text-gray-800">{rec.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {rec.monthly_impact != null && rec.monthly_impact > 0 && (
+                        <span className="text-xs text-green-700 font-medium bg-green-50 px-2 py-0.5 rounded-full">
+                          Save {formatCurrency(rec.monthly_impact, currency)}/mo
+                        </span>
+                      )}
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRIORITY_BADGE[rec.priority]}`}>
+                        {rec.priority}
+                      </span>
+                    </div>
+                  </div>
+                  {rec.category && <p className="text-xs text-gray-400 mb-1 ml-9">{rec.category}</p>}
+                  <p className="text-sm text-gray-600 ml-9">{rec.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Summary */}
+      {result.summary && (
+        <div className="bg-gray-50 rounded-xl p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-1">Summary</p>
+          <p className="text-sm text-gray-600">{result.summary}</p>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between text-xs text-gray-400 pt-1 border-t border-gray-100">
+        <span>Powered by {provider}</span>
+        {result.disclaimer && <span className="max-w-lg text-right">{result.disclaimer}</span>}
+      </div>
     </div>
   );
 }
