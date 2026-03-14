@@ -1,5 +1,7 @@
 # Finance SaaS
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 Multi-tenant personal finance management platform built with FastAPI, SQLAlchemy, PostgreSQL, and React.
 
 ## Tech Stack
