@@ -207,7 +207,7 @@ export default function Dashboard() {
       {(budgets ?? []).length > 0 && (
         <Card title="Budget Overview">
           <div className="space-y-4">
-            {(budgets ?? []).slice(0, 5).map((budget) => (
+            {(budgets ?? []).map((budget) => (
               <BudgetProgressRow key={budget.id} budgetId={budget.id} categories={categories ?? []} currency={currency} />
             ))}
           </div>
