@@ -18,7 +18,7 @@ class AccountService:
             .where(Account.tenant_id == tenant_id, Account.user_id == user_id, Account.is_active == True)
             .order_by(Account.created_at.desc())
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def create_account(self, tenant_id: uuid.UUID, user_id: uuid.UUID, body: AccountCreate) -> Account:
         account = Account(id=uuid.uuid4(), tenant_id=tenant_id, user_id=user_id, **body.model_dump())

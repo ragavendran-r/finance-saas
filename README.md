@@ -98,7 +98,18 @@ cd frontend
 npm install
 ```
 
-### 2. Start the dev server
+### 2. Configure environment
+
+Create `frontend/.env` (kept out of git):
+
+```env
+# Session idle timeout in minutes — user is logged out after this period of inactivity
+VITE_IDLE_TIMEOUT_MINUTES=30
+```
+
+See `frontend/.env.example` for all available variables.
+
+### 3. Start the dev server
 
 ```bash
 npm run dev
@@ -112,9 +123,11 @@ The frontend will be available at `http://localhost:5173`.
 npm run build
 ```
 
+> **Note:** `frontend/.env` is git-ignored. Copy `frontend/.env.example` to `frontend/.env` before running.
+
 ## Features
 
-- **Authentication** — Register with tenant creation, login/logout, JWT tokens
+- **Authentication** — Register with tenant creation, login/logout, JWT access tokens with silent refresh; session expires after configurable idle timeout (default 30 min)
 - **Dashboard** — Net worth, income vs expenses, recent transactions, budget progress, spending chart
 - **Accounts** — Checking, savings, credit, investment, cash accounts with balance tracking
 - **Transactions** — Full CRUD with filtering by account, category, search, and pagination

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -26,6 +26,18 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
         samesite="lax",
     )
     return TokenResponse(access_token=tokens["access_token"])
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+    access_token = await AuthService(db).refresh(refresh_token)
+    return TokenResponse(access_token=access_token)
 
 
 @router.post("/logout")
