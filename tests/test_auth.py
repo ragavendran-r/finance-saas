@@ -39,4 +39,4 @@ async def test_login_wrong_password(client):
         "email": "nobody@example.com",
         "password": "wrong",
     })
-    assert resp.status_code == 403
+    assert resp.status_code == 401

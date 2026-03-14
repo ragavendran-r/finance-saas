@@ -1,10 +1,12 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DuplicateResourceException, NotAuthorizedException
-from app.core.security import create_access_token, create_refresh_token, hash_password, verify_password
+from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+from app.models.revoked_token import RevokedToken
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.schemas.auth import LoginRequest, RegisterRequest
@@ -47,14 +49,50 @@ class AuthService:
             "refresh_token": create_refresh_token(user.id),
         }
 
-    async def refresh(self, refresh_token: str) -> str:
-        from app.core.security import decode_token
+    async def refresh(self, refresh_token: str) -> dict:
+        """Validate the refresh token, revoke it, and issue a rotated pair."""
         payload = decode_token(refresh_token)
-        if not payload or "sub" not in payload:
+        if not payload or "sub" not in payload or "jti" not in payload:
             raise NotAuthorizedException()
+
+        jti = uuid.UUID(payload["jti"])
         user_id = uuid.UUID(payload["sub"])
+
+        # Reject if this JTI has already been revoked (replay attack)
+        existing = await self.db.execute(select(RevokedToken).where(RevokedToken.jti == jti))
+        if existing.scalar_one_or_none():
+            raise NotAuthorizedException()
+
         result = await self.db.execute(select(User).where(User.id == user_id, User.is_active == True))
         user = result.scalar_one_or_none()
         if not user:
             raise NotAuthorizedException()
-        return create_access_token(user.id, user.tenant_id, user.role.value)
+
+        # Revoke the used token
+        exp_ts = payload.get("exp")
+        expires_at = datetime.fromtimestamp(exp_ts, tz=timezone.utc) if exp_ts else datetime.now(timezone.utc)
+        self.db.add(RevokedToken(jti=jti, user_id=user_id, expires_at=expires_at))
+        await self.db.flush()
+
+        return {
+            "access_token": create_access_token(user.id, user.tenant_id, user.role.value),
+            "refresh_token": create_refresh_token(user.id),
+        }
+
+    async def revoke_token(self, refresh_token: str) -> None:
+        """Revoke a refresh token on logout."""
+        payload = decode_token(refresh_token)
+        if not payload or "jti" not in payload or "sub" not in payload:
+            return  # Token already invalid — nothing to do
+
+        jti = uuid.UUID(payload["jti"])
+        user_id = uuid.UUID(payload["sub"])
+
+        existing = await self.db.execute(select(RevokedToken).where(RevokedToken.jti == jti))
+        if existing.scalar_one_or_none():
+            return  # Already revoked
+
+        exp_ts = payload.get("exp")
+        expires_at = datetime.fromtimestamp(exp_ts, tz=timezone.utc) if exp_ts else datetime.now(timezone.utc)
+        self.db.add(RevokedToken(jti=jti, user_id=user_id, expires_at=expires_at))
+        await self.db.commit()

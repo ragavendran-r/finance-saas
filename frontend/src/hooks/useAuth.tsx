@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { authApi } from '../api/auth';
+import { setAccessToken } from '../api/client';
 import type { User } from '../types';
 
 interface AuthContextValue {
@@ -23,22 +24,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(me);
     } catch {
       setUser(null);
-      localStorage.removeItem('access_token');
+      setAccessToken(null);
     }
   }, []);
 
+  // On mount: attempt a silent refresh via the HTTP-only cookie to restore session
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      refreshUser().finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
-  }, [refreshUser]);
+    authApi
+      .refresh()
+      .then((data) => {
+        setAccessToken(data.access_token);
+        return authApi.me();
+      })
+      .then((me) => setUser(me))
+      .catch(() => {
+        setUser(null);
+        setAccessToken(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await authApi.login(email, password);
-    localStorage.setItem('access_token', response.access_token);
+    setAccessToken(response.access_token);
     const me = await authApi.me();
     setUser(me);
   }, []);
@@ -49,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     } finally {
-      localStorage.removeItem('access_token');
+      setAccessToken(null);
       setUser(null);
     }
   }, []);

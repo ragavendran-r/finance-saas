@@ -4,6 +4,17 @@ const IDLE_TIMEOUT_MS =
   (parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES ?? '30', 10) || 30) * 60 * 1000;
 const PROACTIVE_REFRESH_BUFFER_MS = 2 * 60 * 1000; // refresh 2 min before expiry
 
+// In-memory access token — never written to localStorage (XSS protection)
+let accessToken: string | null = null;
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 function getTokenExp(token: string): number | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
@@ -35,7 +46,7 @@ async function doRefresh(): Promise<string> {
       { withCredentials: true }
     )
     .then(({ data }) => {
-      localStorage.setItem('access_token', data.access_token);
+      setAccessToken(data.access_token);
       updateActivity();
       return data.access_token;
     })
@@ -46,7 +57,7 @@ async function doRefresh(): Promise<string> {
 }
 
 function redirectToLogin(): void {
-  localStorage.removeItem('access_token');
+  setAccessToken(null);
   localStorage.removeItem('last_activity');
   window.location.href = '/login';
 }
@@ -62,7 +73,7 @@ const apiClient = axios.create({
 // Request interceptor — attach token; proactively refresh if expiring soon and user is active
 apiClient.interceptors.request.use(async (config) => {
   updateActivity();
-  const token = localStorage.getItem('access_token');
+  const token = getAccessToken();
   if (token) {
     const exp = getTokenExp(token);
     if (exp !== null && exp - Date.now() < PROACTIVE_REFRESH_BUFFER_MS) {

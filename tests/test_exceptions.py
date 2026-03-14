@@ -61,11 +61,11 @@ class TestExceptionHandlers:
 
         return app
 
-    def test_not_authorized_returns_403(self, app_with_handlers):
+    def test_not_authorized_returns_401(self, app_with_handlers):
         client = TestClient(app_with_handlers, raise_server_exceptions=False)
         resp = client.get("/raise-not-authorized")
-        assert resp.status_code == 403
-        assert resp.json()["detail"] == "Forbidden"
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Unauthorized"
 
     def test_resource_not_found_returns_404(self, app_with_handlers):
         client = TestClient(app_with_handlers, raise_server_exceptions=False)
