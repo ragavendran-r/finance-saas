@@ -14,46 +14,46 @@ graph TB
     subgraph BROWSER["🌐 Browser"]
         direction TB
         subgraph FE["Frontend — React 18 + TypeScript + Vite"]
-            PAGES["📄 Pages\nDashboard · Accounts · Transactions\nBudgets · Reports · Tax Advisory"]
-            QUERY["🔄 TanStack React Query\nServer-state cache · stale-while-revalidate"]
-            CLIENT["🔒 Axios Client\nJWT attach · proactive refresh\n30-min idle timeout"]
+            PAGES["📄 Pages<br/>Dashboard · Accounts · Transactions<br/>Budgets · Reports · Tax Advisory"]
+            QUERY["🔄 TanStack React Query<br/>Server-state cache · stale-while-revalidate"]
+            CLIENT["🔒 Axios Client<br/>JWT attach · proactive refresh<br/>30-min idle timeout"]
         end
     end
 
     subgraph SERVER["🖥️ Server — Python 3.11"]
         direction TB
         subgraph API["FastAPI  (/api/v1)"]
-            AUTH_EP["🔑 /auth\nregister · login · refresh · logout · me"]
-            ACCT_EP["🏦 /accounts\nCRUD · balance tracking"]
-            TX_EP["💸 /transactions\nCRUD · filters · pagination"]
-            CAT_EP["🏷️ /categories\nCRUD · hierarchy · system"]
-            BUD_EP["📊 /budgets\nCRUD · progress"]
-            REP_EP["📈 /reports\nspending · income · net-worth · budget-vs-actual"]
-            TAX_EP["🤖 /tax-advisory\nincome-projection · recommendations"]
-            USR_EP["👤 /users\nadmin only"]
+            AUTH_EP["🔑 /auth<br/>register · login · refresh · logout · me"]
+            ACCT_EP["🏦 /accounts<br/>CRUD · balance tracking"]
+            TX_EP["💸 /transactions<br/>CRUD · filters · pagination"]
+            CAT_EP["🏷️ /categories<br/>CRUD · hierarchy · system"]
+            BUD_EP["📊 /budgets<br/>CRUD · progress"]
+            REP_EP["📈 /reports<br/>spending · income · net-worth · budget-vs-actual"]
+            TAX_EP["🤖 /tax-advisory<br/>income-projection · recommendations"]
+            USR_EP["👤 /users<br/>admin only"]
         end
 
         subgraph SVC["Service Layer"]
-            AUTH_SVC["AuthService\nregister · login · refresh"]
+            AUTH_SVC["AuthService<br/>register · login · refresh"]
             ACCT_SVC["AccountService"]
             TX_SVC["TransactionService"]
             CAT_SVC["CategoryService"]
             BUD_SVC["BudgetService"]
             REP_SVC["ReportService"]
-            TAX_SVC["TaxAdvisoryService\nincome projection · LLM prompt"]
-            LLM_FAC["LLM Factory\nget_llm_provider()"]
+            TAX_SVC["TaxAdvisoryService<br/>income projection · LLM prompt"]
+            LLM_FAC["LLM Factory<br/>get_llm_provider()"]
         end
     end
 
     subgraph DATA["💾 Data Layer"]
-        PG[("PostgreSQL 16\nasyncpg + SQLAlchemy 2.0")]
-        ALEMBIC["Alembic\nMigrations"]
+        PG[("PostgreSQL 16<br/>asyncpg + SQLAlchemy 2.0")]
+        ALEMBIC["Alembic<br/>Migrations"]
     end
 
     subgraph LLM["🧠 LLM Providers (pluggable)"]
-        GEMINI["Google Gemini\ngemini-2.5-flash"]
-        OPENAI_P["OpenAI\ngpt-4o-mini"]
-        CLAUDE["Anthropic Claude\nclaude-haiku-4-5"]
+        GEMINI["Google Gemini<br/>gemini-2.5-flash"]
+        OPENAI_P["OpenAI<br/>gpt-4o-mini"]
+        CLAUDE["Anthropic Claude<br/>claude-haiku-4-5"]
     end
 
     PAGES --> QUERY
@@ -274,8 +274,8 @@ erDiagram
 ```mermaid
 flowchart TD
     A([User opens Tax Advisory page]) --> B[GET /tax-advisory/income-projection]
-    B --> C[(Query FY credit transactions\ndate_trunc month DISTINCT)]
-    C --> D[avg_monthly_credit × 12\n= projected annual income]
+    B --> C[(Query FY credit transactions<br/>date_trunc month DISTINCT)]
+    C --> D[avg_monthly_credit x 12<br/>= projected annual income]
     D --> E[Display income banner]
 
     E --> F{User submits form}
@@ -288,7 +288,7 @@ flowchart TD
     I --> J[TaxAdvisoryService]
     J --> K{LLM_PROVIDER env}
 
-    K -->|gemini| L1[Gemini 2.5 Flash\nresponse_mime_type=json]
+    K -->|gemini| L1[Gemini 2.5 Flash<br/>response_mime_type=json]
     K -->|openai| L2[GPT-4o-mini]
     K -->|anthropic| L3[Claude Haiku]
 
@@ -296,15 +296,15 @@ flowchart TD
     L2 --> M
     L3 --> M
 
-    M --> N[Strip markdown fences\nExtract outermost JSON object]
+    M --> N[Strip markdown fences<br/>Extract outermost JSON object]
     N --> O{JSON valid?}
     O -->|yes| P[Structured TaxResult]
     O -->|no| Q[Fallback: wrap in summary field]
 
-    P --> R[Return TaxAdvisoryResponse\nannual_income_used · llm_provider · result]
+    P --> R[Return TaxAdvisoryResponse<br/>annual_income_used · llm_provider · result]
     Q --> R
 
-    R --> S[Frontend renders\nRegime banner · Tax comparison\nRecommendation cards · Summary]
+    R --> S[Frontend renders<br/>Regime banner · Tax comparison<br/>Recommendation cards · Summary]
 
     style A fill:#6366f1,color:#fff
     style S fill:#14b8a6,color:#fff
@@ -343,10 +343,10 @@ graph LR
     end
 
     subgraph SHARED["🌐 System-wide"]
-        SYS_CAT["🏷️ System Categories\nFood · Transport · Utilities…"]
+        SYS_CAT["🏷️ System Categories<br/>Food · Transport · Utilities…"]
     end
 
-    PG[("PostgreSQL\ntenant_id index on every table")]
+    PG[("PostgreSQL<br/>tenant_id index on every table")]
 
     T1 --> PG
     T2 --> PG
