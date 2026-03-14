@@ -1,13 +1,38 @@
 import uuid
+from calendar import monthrange
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ResourceNotFoundException
-from app.models.budget import Budget
+from app.models.budget import Budget, BudgetPeriod
 from app.models.transaction import Transaction, TransactionType
 from app.schemas.budget import BudgetCreate, BudgetProgress, BudgetResponse, BudgetUpdate
+
+
+def _current_period_window(budget: Budget) -> tuple[date, date]:
+    """Return (period_start, period_end) for today clamped to budget bounds."""
+    today = date.today()
+
+    if budget.period == BudgetPeriod.MONTHLY:
+        period_start = today.replace(day=1)
+        last_day = monthrange(today.year, today.month)[1]
+        period_end = today.replace(day=last_day)
+    elif budget.period == BudgetPeriod.WEEKLY:
+        period_start = today - timedelta(days=today.weekday())  # Monday
+        period_end = period_start + timedelta(days=6)           # Sunday
+    else:  # YEARLY
+        period_start = today.replace(month=1, day=1)
+        period_end = today.replace(month=12, day=31)
+
+    # Clamp to budget bounds
+    period_start = max(period_start, budget.start_date)
+    if budget.end_date:
+        period_end = min(period_end, budget.end_date)
+
+    return period_start, period_end
 
 
 class BudgetService:
@@ -52,14 +77,14 @@ class BudgetService:
     async def get_progress(self, tenant_id: uuid.UUID, budget_id: uuid.UUID) -> BudgetProgress:
         budget = await self.get_budget(tenant_id, budget_id)
 
+        period_start, period_end = _current_period_window(budget)
         stmt = select(func.sum(Transaction.amount)).where(
             Transaction.tenant_id == tenant_id,
             Transaction.category_id == budget.category_id,
             Transaction.type == TransactionType.DEBIT,
-            Transaction.date >= budget.start_date,
+            Transaction.date >= period_start,
+            Transaction.date <= period_end,
         )
-        if budget.end_date:
-            stmt = stmt.where(Transaction.date <= budget.end_date)
 
         result = await self.db.execute(stmt)
         spent = result.scalar() or Decimal("0")

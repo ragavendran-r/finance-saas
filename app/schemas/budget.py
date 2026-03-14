@@ -21,8 +21,16 @@ class BudgetCreate(BaseModel):
 
 
 class BudgetUpdate(BaseModel):
+    category_id: uuid.UUID | None = None
     amount: Decimal | None = None
+    period: BudgetPeriod | None = None
+    start_date: date | None = None
     end_date: date | None = None
+
+    @field_validator("period", mode="before")
+    @classmethod
+    def normalize_period(cls, v: str) -> str:
+        return v.lower() if isinstance(v, str) else v
 
 
 class BudgetResponse(BaseModel):

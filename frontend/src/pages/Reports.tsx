@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { reportsApi } from '../api/reports';
 import { accountsApi } from '../api/accounts';
+import { categoriesApi } from '../api/categories';
 import { Card } from '../components/Card';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { formatCurrency } from '../utils/format';
@@ -40,6 +41,7 @@ export default function Reports() {
   const [dateTo, setDateTo] = useState(format(endOfMonth(now), 'yyyy-MM-dd'));
 
   const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list });
+  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
   const currency = accounts?.[0]?.currency || 'USD';
 
   const { data: spending, isLoading: spendLoading } = useQuery({
@@ -284,7 +286,7 @@ export default function Reports() {
                 <div key={i}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium text-gray-700">
-                      {bp.budget.category?.name || 'Budget'}
+                      {categories?.find(c => c.id === bp.budget.category_id)?.name || 'Budget'}
                     </span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-500">
