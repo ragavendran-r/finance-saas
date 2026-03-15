@@ -48,7 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <TrendingUp className="w-5 h-5 text-white" />
         </div>
         {!collapsed && (
-          <span className="font-bold text-white text-lg tracking-tight">FinanceOS</span>
+          <span className="font-bold text-white text-lg tracking-tight">Neo Finance</span>
         )}
       </div>
 
@@ -144,7 +144,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-gray-800">FinanceOS</span>
+            <span className="font-bold text-gray-800">Neo Finance</span>
           </div>
         </header>
 
