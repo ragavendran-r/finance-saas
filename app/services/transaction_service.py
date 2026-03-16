@@ -72,13 +72,84 @@ class TransactionService:
         self, tenant_id: uuid.UUID, transaction_id: uuid.UUID, body: TransactionUpdate
     ) -> Transaction:
         txn = await self.get_transaction(tenant_id, transaction_id)
-        for field, value in body.model_dump(exclude_none=True).items():
+
+        # Capture original values that affect account balance
+        original_account_id = txn.account_id
+        original_amount = txn.amount
+        original_type = txn.type
+
+        update_data = body.model_dump(exclude_none=True)
+        for field, value in update_data.items():
             setattr(txn, field, value)
+
+        # If neither account_id, amount, nor type changed, no balance adjustment is needed
+        if not {"account_id", "amount", "type"} & update_data.keys():
+            await self.db.commit()
+            await self.db.refresh(txn)
+            return txn
+
+        # Lock original account row
+        result = await self.db.execute(
+            select(Account)
+            .where(Account.tenant_id == tenant_id, Account.id == original_account_id)
+            .with_for_update()
+        )
+        original_account = result.scalar_one_or_none()
+        if not original_account:
+            raise ResourceNotFoundException("Account")
+
+        # Determine current values after update
+        new_account_id = txn.account_id
+        new_amount = txn.amount
+        new_type = txn.type
+
+        # If account changed, lock the new account as well
+        new_account = original_account
+        if new_account_id != original_account_id:
+            result = await self.db.execute(
+                select(Account)
+                .where(Account.tenant_id == tenant_id, Account.id == new_account_id)
+                .with_for_update()
+            )
+            new_account_result = result.scalar_one_or_none()
+            if not new_account_result:
+                raise ResourceNotFoundException("Account")
+            new_account = new_account_result
+
+        # Revert original transaction impact on original account
+        if original_type == TransactionType.CREDIT:
+            original_account.balance -= original_amount
+        else:
+            original_account.balance += original_amount
+
+        # Apply new transaction impact on (possibly different) account
+        target_account = new_account
+        if new_type == TransactionType.CREDIT:
+            target_account.balance += new_amount
+        else:
+            target_account.balance -= new_amount
+
         await self.db.commit()
         await self.db.refresh(txn)
         return txn
 
     async def delete_transaction(self, tenant_id: uuid.UUID, transaction_id: uuid.UUID) -> None:
         txn = await self.get_transaction(tenant_id, transaction_id)
+
+        # Lock account row and revert balance atomically
+        result = await self.db.execute(
+            select(Account)
+            .where(Account.tenant_id == tenant_id, Account.id == txn.account_id)
+            .with_for_update()
+        )
+        account = result.scalar_one_or_none()
+        if not account:
+            raise ResourceNotFoundException("Account")
+
+        if txn.type == TransactionType.CREDIT:
+            account.balance -= txn.amount
+        else:
+            account.balance += txn.amount
+
         await self.db.delete(txn)
         await self.db.commit()
