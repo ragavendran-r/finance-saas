@@ -108,12 +108,13 @@ class TransactionService:
         if new_account_id != original_account_id:
             result = await self.db.execute(
                 select(Account)
-                    .where(Account.tenant_id == tenant_id, Account.id == new_account_id)
-                    .with_for_update()
+                .where(Account.tenant_id == tenant_id, Account.id == new_account_id)
+                .with_for_update()
             )
-            new_account = result.scalar_one_or_none()
-            if not new_account:
+            new_account_result = result.scalar_one_or_none()
+            if not new_account_result:
                 raise ResourceNotFoundException("Account")
+            new_account = new_account_result
 
         # Revert original transaction impact on original account
         if original_type == TransactionType.CREDIT:

@@ -1,5 +1,6 @@
 import warnings
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
@@ -33,7 +34,7 @@ class Settings(BaseSettings):
 
     # Cookie settings
     COOKIE_SECURE: bool | None = None  # If None, derived from ENVIRONMENT
-    COOKIE_SAMESITE: str = "lax"
+    COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
 
     # Database pool configuration
     DB_POOL_SIZE: int = 10
