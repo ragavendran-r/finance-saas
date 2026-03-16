@@ -38,11 +38,31 @@ def create_refresh_token(user_id: UUID) -> str:
 
 
 def decode_token(token: str) -> dict:
+    """Decode JWT, returning payload or empty dict on any error.
+
+    This preserves the original behavior relied on by tests and callers.
+    """
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except ExpiredSignatureError:
-        return {"error": "expired"}
-    except InvalidTokenError:
-        return {"error": "invalid"}
     except PyJWTError:
-        return {"error": "token_error"}
+        return {}
+
+
+def decode_token_with_error(token: str) -> tuple[dict, str | None]:
+    """Decode JWT and classify error type without raising.
+
+    Returns (payload, error_code) where error_code is one of:
+    - "expired"
+    - "invalid"
+    - "token_error"
+    - None (no error)
+    """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload, None
+    except ExpiredSignatureError:
+        return {}, "expired"
+    except InvalidTokenError:
+        return {}, "invalid"
+    except PyJWTError:
+        return {}, "token_error"
