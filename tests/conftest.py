@@ -25,7 +25,8 @@ def postgres_url() -> str:
     """
     env_url = os.getenv("DATABASE_URL")
     if env_url:
-        return env_url
+        yield env_url
+        return
 
     with PostgresContainer("postgres:16", username="postgres", password="password", dbname="finance_saas_test") as pg:
         yield _to_asyncpg_url(pg.get_connection_url())
