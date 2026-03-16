@@ -4,16 +4,15 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from testcontainers.postgres import PostgresContainer
-
 from app.core.database import get_db
 from app.main import create_app
 from app.models.base import Base
 
 
 def _to_asyncpg_url(url: str) -> str:
-    # testcontainers returns sync SQLAlchemy-style URLs; convert to asyncpg.
-    return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    # testcontainers may return postgresql:// or postgresql+psycopg2://; normalise to asyncpg.
+    import re
+    return re.sub(r"^postgresql(?:\+\w+)?://", "postgresql+asyncpg://", url, count=1)
 
 
 @pytest.fixture(scope="session")
@@ -27,6 +26,8 @@ def postgres_url() -> str:
     if env_url:
         yield env_url
         return
+
+    from testcontainers.postgres import PostgresContainer  # noqa: PLC0415
 
     with PostgresContainer("postgres:16", username="postgres", password="password", dbname="finance_saas_test") as pg:
         yield _to_asyncpg_url(pg.get_connection_url())
