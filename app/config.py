@@ -31,6 +31,18 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     LLM_MODEL_GEMINI: str = "gemini-2.5-flash"
 
+    # Cookie settings
+    COOKIE_SECURE: bool | None = None  # If None, derived from ENVIRONMENT
+    COOKIE_SAMESITE: str = "lax"
+
+    # Database pool configuration
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+
+    # Security headers
+    SECURITY_CSP: str = "default-src 'none'; frame-ancestors 'none'"
+    SECURITY_FRAME_ANCESTORS: str = "none"
+
     @model_validator(mode="after")
     def _validate_secret_key(self) -> "Settings":
         if self.SECRET_KEY in ("change-me", "secret", ""):

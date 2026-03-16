@@ -118,6 +118,9 @@ npm install
 Create `frontend/.env` (kept out of git):
 
 ```env
+# Backend API base URL (without /api/v1 suffix)
+VITE_API_BASE_URL=http://localhost:8000
+
 # Session idle timeout in minutes — user is logged out after this period of inactivity
 VITE_IDLE_TIMEOUT_MINUTES=30
 ```

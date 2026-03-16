@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import jwt
-from jwt import PyJWTError
+from jwt import ExpiredSignatureError, InvalidTokenError, PyJWTError
 from passlib.context import CryptContext
 
 from app.config import get_settings
@@ -40,5 +40,9 @@ def create_refresh_token(user_id: UUID) -> str:
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except ExpiredSignatureError:
+        return {"error": "expired"}
+    except InvalidTokenError:
+        return {"error": "invalid"}
     except PyJWTError:
-        return {}
+        return {"error": "token_error"}

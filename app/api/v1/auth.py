@@ -6,9 +6,21 @@ from app.core.limiter import AUTH_LOGIN_LIMIT, AUTH_REFRESH_LIMIT, AUTH_REGISTER
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
+from app.config import get_settings
+
+settings = get_settings()
 router = APIRouter()
+
+
 def _set_refresh_cookie(response: Response, token: str) -> None:
-    response.set_cookie(key="refresh_token", value=token, httponly=True, secure=True, samesite="lax")
+    secure = settings.COOKIE_SECURE if settings.COOKIE_SECURE is not None else settings.ENVIRONMENT == "production"
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        httponly=True,
+        secure=secure,
+        samesite=settings.COOKIE_SAMESITE,
+    )
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(AUTH_REGISTER_LIMIT)
 async def register(body: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):

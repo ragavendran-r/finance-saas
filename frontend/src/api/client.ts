@@ -37,11 +37,14 @@ function updateActivity(): void {
 // Singleton refresh promise — prevents multiple concurrent refresh calls
 let refreshPromise: Promise<string> | null = null;
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+const API_PREFIX = `${API_BASE_URL}/api/v1`;
+
 async function doRefresh(): Promise<string> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = axios
     .post<{ access_token: string }>(
-      'http://localhost:8000/api/v1/auth/refresh',
+      `${API_PREFIX}/auth/refresh`,
       {},
       { withCredentials: true }
     )
@@ -63,7 +66,7 @@ function redirectToLogin(): void {
 }
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000/api/v1',
+  baseURL: API_PREFIX,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
